@@ -2,7 +2,7 @@
  * Tests for cancellation/controller.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   CancellationController,
   createCancellationController,
@@ -130,13 +130,15 @@ describe('cancellation:controller', () => {
       const controller = new CancellationController();
       controller.abort(new Error('cancelled'));
 
-      await expect(withCancellation(controller, async () => 'success')).rejects.toThrow('cancelled');
+      await expect(withCancellation(controller, async () => 'success')).rejects.toThrow(
+        'cancelled'
+      );
     });
 
     it('throws when cancelled during operation', async () => {
       const controller = new CancellationController();
 
-      const promise = withCancellation(controller, async (signal) => {
+      const promise = withCancellation(controller, async (_signal) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         return 'success';
       });
@@ -150,7 +152,7 @@ describe('cancellation:controller', () => {
     it('checks cancellation at await points', async () => {
       const controller = new CancellationController();
 
-      const promise = withCancellation(controller, async (signal) => {
+      const promise = withCancellation(controller, async (_signal) => {
         // First check
         controller.throwIfAborted();
         await new Promise((resolve) => setTimeout(resolve, 50));

@@ -5,12 +5,10 @@
  */
 
 import { Command } from 'commander';
-import { createLogger } from './logging/index.js';
+import type { CancellationController } from './cancellation/index.js';
 import { registerCommands } from './commands/index.js';
-import { OctateError, isOctateError } from './errors/index.js';
-import { loadConfig } from './config/merger.js';
-import { CancellationController, createCancellationController } from './cancellation/index.js';
-import { createLogger as createPinoLogger } from './logging/index.js';
+import { isOctateError } from './errors/index.js';
+import { createLogger } from './logging/index.js';
 
 const logger = createLogger('cli');
 
@@ -61,7 +59,7 @@ export function createProgram(): Command {
 /**
  * Sets up the logger based on global options.
  */
-function setupLogger(options: GlobalOptions): void {
+function _setupLogger(options: GlobalOptions): void {
   const logLevel = options.debug ? 'debug' : options.logLevel;
   if (logLevel) {
     process.env.LOG_LEVEL = logLevel;

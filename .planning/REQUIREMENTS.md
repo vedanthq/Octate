@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **REPO-01**: Discover and analyze the local Git repository (working tree, staged changes, commit ranges, branch comparisons)
 - [x] **REPO-02**: Generate Git diffs for the selected review scope with base/head/changed files/lines explicitly known
-- [ ] **REPO-03**: Handle monorepos, symlinks, large files, binary files, generated files, ignored files, vendor dirs, node_modules, build output, and unusual Git worktrees safely
+- [x] **REPO-03**: Handle monorepos, symlinks, large files, binary files, generated files, ignored files, vendor dirs, node_modules, build output, and unusual Git worktrees safely
 - [x] **REPO-04**: Auto-detect Git root, workspace, and monorepo configuration on `cd repo && octate review`
 
 ### Parsing (PARSE)
@@ -54,7 +54,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Output (OUT)
 
 - [ ] **OUT-01**: Non-interactive output modes: `--json`, `--sarif`, `--quiet` with common domain result transformed by InteractiveRenderer, HumanRenderer, JsonRenderer, SarifRenderer
-- [ ] **OUT-02**: Stable exit codes (0=passed, 1=blocking findings, 2=usage/config error, 3=repo/Git error, 4=model/provider error, 5=internal error)
+- [x] **OUT-02**: Stable exit codes (0=passed, 1=blocking findings, 2=usage/config error, 3=repo/Git error, 4=model/provider error, 5=internal error)
 
 ### Configuration (CONF)
 
@@ -63,8 +63,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Cache (CACHE)
 
-- [ ] **CACHE-01**: Local cache at `~/.local/share/octate/` with indexes, cache, findings, logs — project identity namespaced, incremental indexing via content hash/file path/parser version/language/config version
-- [ ] **CACHE-02**: Bounded concurrency with promise pool/task queue — parallelize parsing, diagnostics, reviewers
+- [x] **CACHE-01**: Local cache at `~/.local/share/octate/` with indexes, cache, findings, logs — project identity namespaced, incremental indexing via content hash/file path/parser version/language/config version
+- [x] **CACHE-02**: Bounded concurrency with promise pool/task queue — parallelize parsing, diagnostics, reviewers
 - [x] **CACHE-03**: Graceful cancellation (Ctrl+C) stopping model requests, analysis subprocesses, indexing, background tasks — no orphaned processes
 
 ## v2 Requirements
@@ -134,7 +134,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | REPO-01 | Phase 1 | Complete |
 | REPO-02 | Phase 1 | Complete |
-| REPO-03 | Phase 1 | Pending |
+| REPO-03 | Phase 1 | Complete |
 | REPO-04 | Phase 1 | Complete |
 | PARSE-01 | Phase 2 | Pending |
 | PARSE-02 | Phase 2 | Pending |
@@ -156,11 +156,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TUI-02 | Phase 7 | Pending |
 | TUI-03 | Phase 7 | Pending |
 | OUT-01 | Phase 7 | Pending |
-| OUT-02 | Phase 6 | Pending |
+| OUT-02 | Phase 6 | Complete |
 | CONF-01 | Phase 1 | Complete |
 | CONF-02 | Phase 1 | Complete |
-| CACHE-01 | Phase 1 | Pending |
-| CACHE-02 | Phase 1 | Pending |
+| CACHE-01 | Phase 1 | Complete |
+| CACHE-02 | Phase 1 | Complete |
 | CACHE-03 | Phase 1 | Complete |
 
 **Coverage:**

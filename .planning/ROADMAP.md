@@ -43,7 +43,7 @@ Plans:
 - [x] 01-03-PLAN.md — Repository discovery, Git diff, ReviewScope, monorepo detection
 - [x] 01-04-PLAN.md — Ignore handling, file filtering, binary/generated detection
 - [x] 01-05-PLAN.md — Cache infrastructure: project identity, keys, store, LRU, promise pool
-- [ ] 01-06-PLAN.md — Cancellation (AbortController), Model abstraction interface
+- [x] 01-06-PLAN.md — Cancellation (AbortController), Model abstraction interface
 - [ ] 01-07-PLAN.md — CLI commands: review, init, doctor with exit codes
 
 ### Phase 2: Analysis Layer

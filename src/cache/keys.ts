@@ -1,29 +1,30 @@
 /**
  * Cache key generation with all required components.
  * Key format: SHA256(content) + relativePath + parserVersion + language + configHash
- * Per D-11: Automatic invalidation via configHash in key + explicit octate index --force per D-12
  */
 
 import { createHash } from 'node:crypto';
-import { createLogger } from '../logging/index.js';
-
-const logger = createLogger('cache:keys');
 
 /**
- * Represents a parsed cache key.
+ * Components that make up a cache key.
+ */
+export interface CacheKeyComponents {
+  contentHash: string;
+  filePath: string;
+  parserVersion: string;
+  language: string;
+  configHash: string;
+}
+
+/**
+ * Parsed cache key.
  */
 export interface CacheKey {
-  /** SHA256 hash of file content */
   contentHash: string;
-  /** Relative file path from repo root */
   filePath: string;
-  /** Parser version used */
   parserVersion: string;
-  /** Programming language */
   language: string;
-  /** Configuration hash */
   configHash: string;
-  /** Full composite key */
   fullKey: string;
 }
 
@@ -31,89 +32,74 @@ export interface CacheKey {
  * Generates a cache key from components.
  * Format: {contentHash}:{filePath}:{parserVersion}:{language}:{configHash}
  */
-export function generateCacheKey(
-  contentHash: string,
-  filePath: string,
-  parserVersion: string,
-  language: string,
-  configHash: string
-): string {
-  // Normalize file path to use forward slashes
-  const normalizedPath = filePath.split('\\').join('/');
+export function generateCacheKey(components: CacheKeyComponents): string {
+  const { contentHash, filePath, parserVersion, language, configHash } = components;
+  const normalizedPath = filePath.replace(/\\/g, '/');
   return `${contentHash}:${normalizedPath}:${parserVersion}:${language}:${configHash}`;
 }
 
 /**
- * Parses a cache key into its components.
+ * Generates a content hash from file content.
  */
-export function parseCacheKey(fullKey: string): CacheKey | null {
-  const parts = fullKey.split(':');
-  if (parts.length !== 5) {
-    logger.warn({ fullKey }, 'Invalid cache key format');
-    return null;
-  }
-  // parts.length === 5 guaranteed, so all indices exist
+export function generateContentHash(content: string | Buffer): string {
+  const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+  return createHash('sha256').update(buffer).digest('hex').substring(0, 16);
+}
+
+/**
+ * Parses a cache key back into components.
+ */
+export function parseCacheKey(key: string): CacheKey | null {
+  const parts = key.split(':');
+  if (parts.length !== 5) return null;
+
+  const [contentHash, filePath, parserVersion, language, configHash] = parts;
   return {
-    contentHash: parts[0]!,
-    filePath: parts[1]!,
-    parserVersion: parts[2]!,
-    language: parts[3]!,
-    configHash: parts[4]!,
-    fullKey,
+    contentHash,
+    filePath,
+    parserVersion,
+    language,
+    configHash,
+    fullKey: key,
   };
 }
 
 /**
- * Computes SHA256 hash of content.
+ * Creates a cache key for analysis results.
  */
-export function computeContentHash(content: string | Uint8Array): string {
-  const hash = createHash('sha256');
-  if (typeof content === 'string') {
-    hash.update(content);
-  } else {
-    hash.update(content);
-  }
-  return hash.digest('hex');
-}
-
-/**
- * Computes a hash of the configuration object.
- * Used for automatic cache invalidation when config changes.
- */
-export function computeConfigHash(config: unknown): string {
-  const hash = createHash('sha256');
-  // Use JSON.stringify with stable key ordering
-  const json = JSON.stringify(config, Object.keys(config as object).sort());
-  hash.update(json);
-  return hash.digest('hex').substring(0, 16);
-}
-
-/**
- * Generates a cache key from file content and metadata.
- * Convenience function that computes content hash and generates full key.
- */
-export function generateCacheKeyFromContent(
-  content: string | Uint8Array,
+export function createAnalysisCacheKey(
+  content: string | Buffer,
   filePath: string,
   parserVersion: string,
   language: string,
   configHash: string
 ): string {
-  const contentHash = computeContentHash(content);
-  return generateCacheKey(contentHash, filePath, parserVersion, language, configHash);
+  const contentHash = generateContentHash(content);
+  return generateCacheKey({ contentHash, filePath, parserVersion, language, configHash });
 }
 
 /**
- * Validates a cache key format.
+ * Creates a cache key for index entries (symbols, references, etc.).
+ */
+export function createIndexCacheKey(
+  identifier: string,
+  parserVersion: string,
+  language: string,
+  configHash: string
+): string {
+  const contentHash = createHash('sha256').update(identifier).digest('hex').substring(0, 16);
+  return generateCacheKey({
+    contentHash,
+    filePath: identifier,
+    parserVersion,
+    language,
+    configHash,
+  });
+}
+
+/**
+ * Validates that a cache key is well-formed.
  */
 export function isValidCacheKey(key: string): boolean {
-  const parsed = parseCacheKey(key);
-  if (!parsed) return false;
-  // Validate contentHash is 64 hex chars (SHA256)
-  if (!/^[a-f0-9]{64}$/.test(parsed.contentHash)) return false;
-  // Validate configHash is 16 hex chars (truncated SHA256)
-  if (!/^[a-f0-9]{16}$/.test(parsed.configHash)) return false;
-  // filePath should not be empty
-  if (!parsed.filePath) return false;
-  return true;
+  return parseCacheKey(key) !== null;
 }

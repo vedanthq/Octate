@@ -2,12 +2,8 @@
  * Tests for cancellation/subprocess.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import {
-  spawnWithSignal,
-  killProcessTree,
-  SubprocessError,
-} from './subprocess.js';
+import { describe, expect, it } from '@jest/globals';
+import { killProcessTree, SubprocessError, spawnWithSignal } from './subprocess.js';
 
 describe('cancellation:subprocess', () => {
   describe('spawnWithSignal', () => {
@@ -38,9 +34,9 @@ describe('cancellation:subprocess', () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(
-        spawnWithSignal('sleep', ['10'], { signal: controller.signal })
-      ).rejects.toThrow(SubprocessError);
+      await expect(spawnWithSignal('sleep', ['10'], { signal: controller.signal })).rejects.toThrow(
+        SubprocessError
+      );
     });
 
     it('handles abort signal during execution', async () => {
@@ -65,9 +61,9 @@ describe('cancellation:subprocess', () => {
     });
 
     it('handles spawn error for non-existent command', async () => {
-      await expect(
-        spawnWithSignal('non-existent-command-xyz', [])
-      ).rejects.toThrow(SubprocessError);
+      await expect(spawnWithSignal('non-existent-command-xyz', [])).rejects.toThrow(
+        SubprocessError
+      );
     });
   });
 

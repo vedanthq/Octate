@@ -3,21 +3,16 @@
  */
 
 import { Command } from 'commander';
-import { resolve, relative } from 'node:path';
-import { createLogger } from '../logging/index.js';
-import { loadConfig } from '../config/merger.js';
-import { findGitRoot } from '../repository/discovery.js';
-import { resolveScope, parseRange, type ScopeOptions } from '../repository/scope.js';
-import { CancellationController, createCancellationController, withCancellation } from '../cancellation/index.js';
 import {
-  ConfigurationError,
-  GitError,
-  ModelError,
-  InternalError,
-  isConfigurationError,
-  isGitError,
-  isModelError,
-} from '../errors/index.js';
+  type CancellationController,
+  createCancellationController,
+  withCancellation,
+} from '../cancellation/index.js';
+import { loadConfig } from '../config/merger.js';
+import { ConfigurationError, GitError } from '../errors/index.js';
+import { createLogger } from '../logging/index.js';
+import { findGitRoot } from '../repository/discovery.js';
+import { parseRange, resolveScope, type ScopeOptions } from '../repository/scope.js';
 
 const logger = createLogger('commands:review');
 
@@ -195,7 +190,7 @@ async function runReview(
  */
 async function executeReview(
   scope: Awaited<ReturnType<typeof resolveScope>>,
-  config: Awaited<ReturnType<typeof loadConfig>>,
+  _config: Awaited<ReturnType<typeof loadConfig>>,
   _signal: AbortSignal
 ): Promise<ReviewResult> {
   // This is a placeholder implementation for Phase 1
@@ -369,7 +364,9 @@ function formatDefaultOutput(result: ReviewResult): string {
     lines.push('Findings:');
     for (const finding of result.findings) {
       const severityIcon = getSeverityIcon(finding.severity);
-      lines.push(`  ${severityIcon} [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line}`);
+      lines.push(
+        `  ${severityIcon} [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line}`
+      );
       lines.push(`      ${finding.message}`);
       if (finding.suggestion) {
         lines.push(`      💡 ${finding.suggestion}`);

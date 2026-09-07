@@ -1,159 +1,146 @@
 /**
- * Tests for lru.ts - LRU eviction with size tracking.
+ * Tests for LRU cache with size tracking.
  */
 
-import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
-import { createLRUCache, type LRUCache } from './lru.js';
-import { type CacheStore, createCacheStore } from './store.js';
+import { describe, expect, it } from '@jest/globals';
+import { createCacheEntryLRUCache, createLRUCache } from './lru.js';
 
-describe('cache:lru', () => {
-  let testDir: string;
-  let cacheDir: string;
-  let store: CacheStore<string>;
-  let lru: LRUCache<string>;
-
-  beforeEach(async () => {
-    testDir = join(tmpdir(), `octate-lru-test-${randomUUID()}`);
-    cacheDir = join(testDir, 'cache');
-    store = createCacheStore<string>({ rootDir: cacheDir, maxSize: 1000 }); // 1KB for testing
-    lru = createLRUCache<string>({ maxSize: 1000, store });
-    await store.initialize();
+describe('LRUCache', () => {
+  it('stores and retrieves values', () => {
+    const cache = createLRUCache<string, string>(1000);
+    cache.set('key1', 'value1', 10);
+    expect(cache.get('key1')).toBe('value1');
   });
 
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
+  it('returns undefined for missing keys', () => {
+    const cache = createLRUCache<string, string>(1000);
+    expect(cache.get('missing')).toBeUndefined();
   });
 
-  describe('get and set', () => {
-    it('stores and retrieves a value', async () => {
-      await lru.set('key1', 'value1');
-      const value = await lru.get('key1');
-
-      expect(value).toBe('value1');
-    });
-
-    it('returns undefined for non-existent key', async () => {
-      const value = await lru.get('nonexistent');
-      expect(value).toBeUndefined();
-    });
-
-    it('updates existing key', async () => {
-      await lru.set('key1', 'value1');
-      await lru.set('key1', 'value2');
-      const value = await lru.get('key1');
-
-      expect(value).toBe('value2');
-    });
+  it('updates existing keys', () => {
+    const cache = createLRUCache<string, string>(1000);
+    cache.set('key1', 'value1', 10);
+    cache.set('key1', 'value2', 10);
+    expect(cache.get('key1')).toBe('value2');
+    expect(cache.getSize()).toBe(10);
   });
 
-  describe('LRU eviction', () => {
-    it('evicts least recently used entry when size limit exceeded', async () => {
-      // Add entries that total more than maxSize (1000 bytes)
-      await lru.set('key1', 'x'.repeat(200)); // ~200 bytes
-      await lru.set('key2', 'y'.repeat(200)); // ~200 bytes
-      await lru.set('key3', 'z'.repeat(200)); // ~200 bytes
-      await lru.set('key4', 'w'.repeat(200)); // ~200 bytes
-      await lru.set('key5', 'v'.repeat(200)); // ~200 bytes = 1000 bytes total
+  it('evicts LRU entries when size limit exceeded', () => {
+    const cache = createLRUCache<string, string>(50);
+    cache.set('key1', 'value1', 20);
+    cache.set('key2', 'value2', 20);
+    cache.set('key3', 'value3', 20); // Should evict key1
 
-      // key1 should be evicted (LRU)
-      const key1Value = await lru.get('key1');
-      expect(key1Value).toBeUndefined();
-
-      // Others should still exist
-      expect(await lru.get('key2')).toBe('y'.repeat(200));
-      expect(await lru.get('key3')).toBe('z'.repeat(200));
-      expect(await lru.get('key4')).toBe('w'.repeat(200));
-      expect(await lru.get('key5')).toBe('v'.repeat(200));
-    });
-
-    it('does not evict recently accessed entries', async () => {
-      await lru.set('key1', 'x'.repeat(200));
-      await lru.set('key2', 'y'.repeat(200));
-      await lru.set('key3', 'z'.repeat(200));
-      await lru.set('key4', 'w'.repeat(200));
-
-      // Access key1 to make it recently used
-      await lru.get('key1');
-
-      // Add another entry to trigger eviction
-      await lru.set('key5', 'v'.repeat(200));
-
-      // key1 should still exist (was recently accessed)
-      expect(await lru.get('key1')).toBe('x'.repeat(200));
-
-      // key2 should be evicted (LRU)
-      expect(await lru.get('key2')).toBeUndefined();
-    });
+    expect(cache.has('key1')).toBe(false);
+    expect(cache.has('key2')).toBe(true);
+    expect(cache.has('key3')).toBe(true);
+    expect(cache.getSize()).toBeLessThanOrEqual(50);
   });
 
-  describe('delete', () => {
-    it('deletes entry from cache and store', async () => {
-      await lru.set('key1', 'value1');
-      const deleted = await lru.delete('key1');
+  it('moves accessed entries to front', () => {
+    const cache = createLRUCache<string, string>(50);
+    cache.set('key1', 'value1', 15);
+    cache.set('key2', 'value2', 15);
+    cache.set('key3', 'value3', 15);
 
-      expect(deleted).toBe(true);
-      expect(await lru.get('key1')).toBeUndefined();
-      expect(await lru.has('key1')).toBe(false);
-    });
+    // Access key1 to make it MRU
+    cache.get('key1');
 
-    it('returns false for non-existent key', async () => {
-      const deleted = await lru.delete('nonexistent');
-      expect(deleted).toBe(false);
-    });
+    // Add key4, should evict key2 (LRU)
+    cache.set('key4', 'value4', 15);
+
+    expect(cache.has('key1')).toBe(true); // MRU, not evicted
+    expect(cache.has('key2')).toBe(false); // LRU, evicted
+    expect(cache.has('key3')).toBe(true);
+    expect(cache.has('key4')).toBe(true);
   });
 
-  describe('has', () => {
-    it('returns true for existing key', async () => {
-      await lru.set('key1', 'value1');
-      expect(await lru.has('key1')).toBe(true);
-    });
-
-    it('returns false for non-existent key', async () => {
-      expect(await lru.has('nonexistent')).toBe(false);
-    });
+  it('deletes entries', () => {
+    const cache = createLRUCache<string, string>(1000);
+    cache.set('key1', 'value1', 10);
+    expect(cache.delete('key1')).toBe(true);
+    expect(cache.has('key1')).toBe(false);
+    expect(cache.getSize()).toBe(0);
   });
 
-  describe('size tracking', () => {
-    it('tracks current size', async () => {
-      expect(lru.getCurrentSize()).toBe(0);
-      await lru.set('key1', 'x'.repeat(100));
-      expect(lru.getCurrentSize()).toBeGreaterThan(0);
-    });
-
-    it('reduces size on delete', async () => {
-      await lru.set('key1', 'x'.repeat(100));
-      const sizeAfterSet = lru.getCurrentSize();
-      await lru.delete('key1');
-      expect(lru.getCurrentSize()).toBeLessThan(sizeAfterSet);
-    });
-
-    it('returns max size', () => {
-      expect(lru.getMaxSize()).toBe(1000);
-    });
+  it('returns false when deleting missing key', () => {
+    const cache = createLRUCache<string, string>(1000);
+    expect(cache.delete('missing')).toBe(false);
   });
 
-  describe('eviction callback', () => {
-    it('calls onEvict callback when entry is evicted', async () => {
-      const evictedKeys: string[] = [];
-      const store2 = createCacheStore<string>({ rootDir: join(testDir, 'cache2'), maxSize: 1000 });
-      const lru2 = createLRUCache<string>({
-        maxSize: 1000,
-        store: store2,
-        onEvict: (key) => evictedKeys.push(key),
-      });
-      await store2.initialize();
+  it('clears all entries', () => {
+    const cache = createLRUCache<string, string>(1000);
+    cache.set('key1', 'value1', 10);
+    cache.set('key2', 'value2', 10);
+    cache.clear();
 
-      await lru2.set('key1', 'x'.repeat(200));
-      await lru2.set('key2', 'y'.repeat(200));
-      await lru2.set('key3', 'z'.repeat(200));
-      await lru2.set('key4', 'w'.repeat(200));
-      await lru2.set('key5', 'v'.repeat(200));
+    expect(cache.getSize()).toBe(0);
+    expect(cache.getCount()).toBe(0);
+    expect(cache.has('key1')).toBe(false);
+  });
 
-      expect(evictedKeys).toContain('key1');
-    });
+  it('tracks count correctly', () => {
+    const cache = createLRUCache<string, string>(1000);
+    expect(cache.getCount()).toBe(0);
+    cache.set('key1', 'value1', 10);
+    expect(cache.getCount()).toBe(1);
+    cache.set('key2', 'value2', 10);
+    expect(cache.getCount()).toBe(2);
+    cache.delete('key1');
+    expect(cache.getCount()).toBe(1);
+  });
+
+  it('respects max size', () => {
+    const cache = createLRUCache<string, string>(1000);
+    expect(cache.getMaxSize()).toBe(1000);
+  });
+
+  it('handles large values that exceed max size', () => {
+    const cache = createLRUCache<string, string>(50);
+    cache.set('key1', 'x'.repeat(100), 100); // Larger than max size
+
+    expect(cache.has('key1')).toBe(false);
+    expect(cache.getSize()).toBe(0);
+  });
+});
+
+describe('CacheEntryLRUCache', () => {
+  it('stores and retrieves cache entries', () => {
+    const cache = createCacheEntryLRUCache(1000);
+    const entry = { key: 'key1', value: 'value1', createdAt: Date.now(), size: 10 };
+    cache.set('key1', entry);
+
+    const retrieved = cache.get('key1');
+    expect(retrieved).toEqual(entry);
+  });
+
+  it('uses entry size for eviction', () => {
+    const cache = createCacheEntryLRUCache(50);
+    cache.set('key1', { key: 'key1', value: 'x'.repeat(20), createdAt: Date.now(), size: 20 });
+    cache.set('key2', { key: 'key2', value: 'y'.repeat(20), createdAt: Date.now(), size: 20 });
+    cache.set('key3', { key: 'key3', value: 'z'.repeat(20), createdAt: Date.now(), size: 20 });
+
+    expect(cache.has('key1')).toBe(false);
+    expect(cache.has('key2')).toBe(true);
+    expect(cache.has('key3')).toBe(true);
+  });
+
+  it('tracks size correctly', () => {
+    const cache = createCacheEntryLRUCache(1000);
+    cache.set('key1', { key: 'key1', value: 'value1', createdAt: Date.now(), size: 10 });
+    cache.set('key2', { key: 'key2', value: 'value2', createdAt: Date.now(), size: 20 });
+
+    expect(cache.getSize()).toBe(30);
+    expect(cache.getCount()).toBe(2);
+  });
+});
+
+describe('createLRUCache / createCacheEntryLRUCache', () => {
+  it('creates cache with specified max size', () => {
+    const cache1 = createLRUCache<string, number>(2048);
+    expect(cache1.getMaxSize()).toBe(2048);
+
+    const cache2 = createCacheEntryLRUCache(4096);
+    expect(cache2.getMaxSize()).toBe(4096);
   });
 });

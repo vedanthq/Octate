@@ -2,17 +2,17 @@
  * Tests for model/types.ts and model/abstraction.ts
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
+import { z } from 'zod';
 import {
-  ModelRequest,
-  ModelResponse,
-  ModelUsage,
+  isReviewModel,
+  type ModelRequest,
+  type ModelResponse,
   ModelResponseFindingsSchema,
   ModelResponseSchema,
-  ReviewModel,
-  isReviewModel,
+  type ModelUsage,
+  type ReviewModel,
 } from './index.js';
-import { z } from 'zod';
 
 describe('model:types', () => {
   describe('ModelUsage', () => {
@@ -37,9 +37,7 @@ describe('model:types', () => {
         projectRules: ['No hardcoded secrets', 'Use type safety'],
         repoMetadata: { languages: ['typescript'], size: 10000 },
         diff: '--- a/file.ts\n+++ b/file.ts\n@@ -1 +1 @@\n-const x = 1;\n+const x = 2;',
-        context: [
-          { source: 'file.ts', content: 'const x = 1;', relevance: 0.9 },
-        ],
+        context: [{ source: 'file.ts', content: 'const x = 1;', relevance: 0.9 }],
         diagnostics: [
           { file: 'file.ts', line: 1, message: 'Unused variable', severity: 'warning' },
         ],

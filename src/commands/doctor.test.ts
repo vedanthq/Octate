@@ -2,7 +2,7 @@
  * Tests for commands/doctor.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { createDoctorCommand } from './doctor.js';
 
 describe('commands:doctor', () => {

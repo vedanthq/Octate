@@ -2,10 +2,10 @@
  * Command registry - registers all CLI commands.
  */
 
-import { Command } from 'commander';
+import type { Command } from 'commander';
+import { doctorCommand } from './doctor.js';
 import { initCommand } from './init.js';
 import { reviewCommand } from './review.js';
-import { doctorCommand } from './doctor.js';
 
 /**
  * Registers all commands with the Commander.js program.

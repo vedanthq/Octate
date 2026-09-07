@@ -1,148 +1,133 @@
 /**
- * Tests for store.ts - File-based cache store with atomic writes.
+ * Tests for file-based cache store with atomic writes.
  */
 
 import { randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { type CacheStore, createCacheStore } from './store.js';
 
-describe('cache:store', () => {
-  let testDir: string;
-  let cacheDir: string;
-  let store: CacheStore<unknown>;
+const TEST_DIR = join(tmpdir(), `octate-store-test-${randomUUID()}`);
+
+describe('CacheStore', () => {
+  let store: CacheStore;
+  let storeDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `octate-store-test-${randomUUID()}`);
-    cacheDir = join(testDir, 'cache');
-    store = createCacheStore<unknown>({ rootDir: cacheDir, maxSize: 1024 * 1024 }); // 1MB for testing
-    await store.initialize();
+    storeDir = resolve(TEST_DIR, `store-${randomUUID()}`);
+    store = await createCacheStore({ rootDir: storeDir, maxSize: 1024 * 1024 }); // 1MB
   });
 
   afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
+    await rm(TEST_DIR, { recursive: true, force: true });
   });
 
-  describe('set and get', () => {
-    it('stores and retrieves a value', async () => {
-      await store.set('key1', 'value1');
-      const entry = await store.get('key1');
+  it('stores and retrieves values', async () => {
+    await store.set('key1', { data: 'test', count: 42 });
+    const entry = await store.get('key1');
 
-      expect(entry).not.toBeNull();
-      expect(entry?.key).toBe('key1');
-      expect(entry?.value).toBe('value1');
-      expect(entry?.size).toBeGreaterThan(0);
-    });
-
-    it('returns null for non-existent key', async () => {
-      const entry = await store.get('nonexistent');
-      expect(entry).toBeNull();
-    });
-
-    it('updates existing key', async () => {
-      await store.set('key1', 'value1');
-      await store.set('key1', 'value2');
-      const entry = await store.get('key1');
-
-      expect(entry?.value).toBe('value2');
-    });
-
-    it('stores complex objects', async () => {
-      const obj = { foo: 'bar', baz: [1, 2, 3], nested: { a: 'b' } };
-      await store.set('obj-key', obj);
-      const entry = await store.get('obj-key');
-
-      expect(entry?.value).toEqual(obj);
-    });
+    expect(entry).not.toBeNull();
+    expect(entry?.value).toEqual({ data: 'test', count: 42 });
+    expect(entry?.key).toBe('key1');
+    expect(entry?.createdAt).toBeGreaterThan(0);
+    expect(entry?.size).toBeGreaterThan(0);
   });
 
-  describe('delete', () => {
-    it('deletes existing key', async () => {
-      await store.set('key1', 'value1');
-      const deleted = await store.delete('key1');
-
-      expect(deleted).toBe(true);
-      const entry = await store.get('key1');
-      expect(entry).toBeNull();
-    });
-
-    it('returns false for non-existent key', async () => {
-      const deleted = await store.delete('nonexistent');
-      expect(deleted).toBe(false);
-    });
+  it('returns null for non-existent keys', async () => {
+    const entry = await store.get('nonexistent');
+    expect(entry).toBeNull();
   });
 
-  describe('has', () => {
-    it('returns true for existing key', async () => {
-      await store.set('key1', 'value1');
-      const exists = await store.has('key1');
-      expect(exists).toBe(true);
-    });
+  it('updates existing keys', async () => {
+    await store.set('key1', { version: 1 });
+    await store.set('key1', { version: 2 });
 
-    it('returns false for non-existent key', async () => {
-      const exists = await store.has('nonexistent');
-      expect(exists).toBe(false);
-    });
+    const entry = await store.get('key1');
+    expect(entry?.value).toEqual({ version: 2 });
   });
 
-  describe('size tracking', () => {
-    it('tracks current size', async () => {
-      const initialSize = store.getCurrentSize();
-      await store.set('key1', 'x'.repeat(100));
-      expect(store.getCurrentSize()).toBeGreaterThan(initialSize);
-    });
+  it('deletes keys', async () => {
+    await store.set('key1', 'value1');
+    const deleted = await store.delete('key1');
+    expect(deleted).toBe(true);
 
-    it('reduces size on delete', async () => {
-      await store.set('key1', 'x'.repeat(100));
-      const sizeAfterSet = store.getCurrentSize();
-      await store.delete('key1');
-      expect(store.getCurrentSize()).toBeLessThan(sizeAfterSet);
-    });
-
-    it('returns max size', () => {
-      expect(store.getMaxSize()).toBe(1024 * 1024);
-    });
+    const entry = await store.get('key1');
+    expect(entry).toBeNull();
   });
 
-  describe('keys', () => {
-    it('lists all keys', async () => {
-      await store.set('key1', 'value1');
-      await store.set('key2', 'value2');
-      await store.set('key3', 'value3');
-
-      const keys = await store.keys();
-      expect(keys).toHaveLength(3);
-      expect(keys).toContain('key1');
-      expect(keys).toContain('key2');
-      expect(keys).toContain('key3');
-    });
+  it('returns false when deleting non-existent key', async () => {
+    const deleted = await store.delete('nonexistent');
+    expect(deleted).toBe(false);
   });
 
-  describe('clear', () => {
-    it('removes all entries', async () => {
-      await store.set('key1', 'value1');
-      await store.set('key2', 'value2');
-      await store.clear();
-
-      const keys = await store.keys();
-      expect(keys).toHaveLength(0);
-      expect(store.getCurrentSize()).toBe(0);
-    });
+  it('checks key existence', async () => {
+    await store.set('key1', 'value1');
+    expect(await store.has('key1')).toBe(true);
+    expect(await store.has('nonexistent')).toBe(false);
   });
 
-  describe('atomic writes', () => {
-    it('does not leave partial files on error', async () => {
-      // This test verifies that temp files are cleaned up
-      // We can't easily simulate a write error, but we can verify
-      // that only the final file exists after successful write
-      await store.set('key1', 'value1');
+  it('tracks cache size', async () => {
+    const sizeBefore = await store.getSize();
+    await store.set('key1', 'x'.repeat(100));
+    const sizeAfter = await store.getSize();
 
-      const { readdir } = await import('node:fs/promises');
-      const files = await readdir(cacheDir);
-      const tempFiles = files.filter((f) => f.endsWith('.tmp'));
-      expect(tempFiles).toHaveLength(0);
-    });
+    expect(sizeAfter).toBeGreaterThan(sizeBefore);
+  });
+
+  it('enforces max size with LRU eviction', async () => {
+    // Create a small store (5KB max)
+    const smallStoreDir = resolve(TEST_DIR, `small-${randomUUID()}`);
+    const smallStore = await createCacheStore({ rootDir: smallStoreDir, maxSize: 5000 }); // 5KB max
+
+    // Add entries that exceed the limit
+    await smallStore.set('key1', 'x'.repeat(2000));
+    await smallStore.set('key2', 'y'.repeat(2000));
+    await smallStore.set('key3', 'z'.repeat(2000)); // Should evict key1
+
+    const size = await smallStore.getSize();
+    expect(size).toBeLessThanOrEqual(5000);
+
+    // key1 should be evicted (oldest)
+    expect(await smallStore.has('key1')).toBe(false);
+    expect(await smallStore.has('key2')).toBe(true);
+    expect(await smallStore.has('key3')).toBe(true);
+  });
+
+  it('handles atomic writes on crash', async () => {
+    await store.set('key1', 'value1');
+    // Simulate crash by creating a temp file in the store directory
+    const { writeFile, mkdir, readdir } = await import('node:fs/promises');
+    const tempDir = join(storeDir, 'ab');
+    await mkdir(tempDir, { recursive: true });
+    const tempFile = join(tempDir, 'temp.tmp12345');
+    await writeFile(tempFile, 'corrupted data');
+
+    // Normal operations should still work
+    await store.set('key2', 'value2');
+    const entry = await store.get('key2');
+    expect(entry?.value).toBe('value2');
+  });
+
+  it('clears all entries', async () => {
+    await store.set('key1', 'value1');
+    await store.set('key2', 'value2');
+    await store.clear();
+
+    expect(await store.getSize()).toBe(0);
+    expect(await store.has('key1')).toBe(false);
+    expect(await store.has('key2')).toBe(false);
+  });
+});
+
+describe('createCacheStore', () => {
+  it('initializes store and returns instance', async () => {
+    const storeDir = resolve(TEST_DIR, `create-${randomUUID()}`);
+    const store = await createCacheStore({ rootDir: storeDir });
+
+    await store.set('test', 'value');
+    const entry = await store.get('test');
+    expect(entry?.value).toBe('value');
   });
 });

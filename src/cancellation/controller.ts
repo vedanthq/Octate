@@ -56,15 +56,23 @@ export class CancellationController {
       child.abort(this.abortReason);
     } else {
       // Listen for parent abort
-      this.abortController.signal.addEventListener('abort', () => {
-        child.abort(this.abortReason);
-      }, { once: true });
+      this.abortController.signal.addEventListener(
+        'abort',
+        () => {
+          child.abort(this.abortReason);
+        },
+        { once: true }
+      );
     }
 
     // Clean up reference when child aborts
-    child.signal.addEventListener('abort', () => {
-      this.childControllers.delete(child);
-    }, { once: true });
+    child.signal.addEventListener(
+      'abort',
+      () => {
+        this.childControllers.delete(child);
+      },
+      { once: true }
+    );
 
     return child;
   }
@@ -79,14 +87,22 @@ export class CancellationController {
     if (this.aborted) {
       child.abort(this.abortReason);
     } else {
-      this.abortController.signal.addEventListener('abort', () => {
-        child.abort(this.abortReason);
-      }, { once: true });
+      this.abortController.signal.addEventListener(
+        'abort',
+        () => {
+          child.abort(this.abortReason);
+        },
+        { once: true }
+      );
     }
 
-    child.signal.addEventListener('abort', () => {
-      this.childControllers.delete(child);
-    }, { once: true });
+    child.signal.addEventListener(
+      'abort',
+      () => {
+        this.childControllers.delete(child);
+      },
+      { once: true }
+    );
   }
 
   /**
@@ -121,14 +137,22 @@ export class CancellationController {
   /**
    * Adds an event listener for the abort event.
    */
-  addEventListener(type: 'abort', listener: (this: AbortSignal, ev: Event) => void, options?: AddEventListenerOptions): void {
+  addEventListener(
+    type: 'abort',
+    listener: (this: AbortSignal, ev: Event) => void,
+    options?: AddEventListenerOptions
+  ): void {
     this.abortController.signal.addEventListener(type, listener, options);
   }
 
   /**
    * Removes an event listener for the abort event.
    */
-  removeEventListener(type: 'abort', listener: (this: AbortSignal, ev: Event) => void, options?: EventListenerOptions): void {
+  removeEventListener(
+    type: 'abort',
+    listener: (this: AbortSignal, ev: Event) => void,
+    options?: EventListenerOptions
+  ): void {
     this.abortController.signal.removeEventListener(type, listener, options);
   }
 }
@@ -180,16 +204,13 @@ export async function withCancellation<T>(
     controller.signal.addEventListener('abort', handler, { once: true });
 
     // Clean up listener when operation completes
-    const cleanup = () => controller.signal.removeEventListener('abort', handler);
+    const _cleanup = () => controller.signal.removeEventListener('abort', handler);
     // We can't easily clean up here since we don't know when operation completes
     // The listener has { once: true } so it self-removes on first abort
   });
 
   try {
-    return await Promise.race([
-      operation(controller.signal),
-      abortPromise,
-    ]);
+    return await Promise.race([operation(controller.signal), abortPromise]);
   } finally {
     controller.throwIfAborted();
   }

@@ -4,6 +4,7 @@
  */
 
 import type { ReviewModel } from './types.js';
+
 export type { ReviewModel } from './types.js';
 
 /**

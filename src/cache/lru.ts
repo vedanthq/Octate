@@ -1,204 +1,139 @@
 /**
- * LRU eviction with size tracking.
- * Enforces 500MB max cache size per project per D-13.
+ * LRU cache with size tracking for in-memory caching.
+ * Used for hot cache entries to avoid filesystem access.
  */
 
-import { createLogger } from '../logging/index.js';
-import type { CacheStore } from './store.js';
-
-const logger = createLogger('cache:lru');
+import type { CacheEntry } from './store.js';
 
 /**
- * LRU Cache entry with size tracking.
+ * LRU cache node.
  */
-export interface LRUEntry<T = unknown> {
-  key: string;
-  value: T;
+interface LRUNode<K, V> {
+  key: K;
+  value: V;
   size: number;
-  createdAt: number;
-  accessedAt: number;
+  prev: LRUNode<K, V> | null;
+  next: LRUNode<K, V> | null;
 }
 
 /**
- * Options for LRUCache.
+ * LRU cache with size limit.
+ * Evicts least recently used entries when size limit is reached.
  */
-export interface LRUCacheOptions<T = unknown> {
-  /** Maximum cache size in bytes (default: 500MB) */
-  maxSize: number;
-  /** Cache store instance for persistence */
-  store: CacheStore;
-  /** Callback when entry is evicted */
-  onEvict?: (key: string, entry: LRUEntry<T>) => void;
-}
-
-/**
- * LRU Cache implementation with size-based eviction.
- * Uses a Map for O(1) access and a doubly-linked list for O(1) LRU ordering.
- */
-export class LRUCache<T = unknown> {
+export class LRUCache<K, V> {
   private maxSize: number;
-  private store: CacheStore;
-  private onEvict?: (key: string, entry: LRUEntry<T>) => void;
-  private cache: Map<string, LRUNode<T>> = new Map();
-  private head: LRUNode<T> | null = null;
-  private tail: LRUNode<T> | null = null;
   private currentSize: number = 0;
+  private cache: Map<K, LRUNode<K, V>> = new Map();
+  private head: LRUNode<K, V> | null = null;
+  private tail: LRUNode<K, V> | null = null;
 
-  constructor(options: LRUCacheOptions<T>) {
-    this.maxSize = options.maxSize;
-    this.store = options.store;
-    this.onEvict = options.onEvict as (key: string, entry: LRUEntry<T>) => undefined | undefined;
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
   }
 
   /**
-   * Gets a value from the cache, updating its access time.
+   * Gets a value from the cache.
+   * Moves the entry to the front (most recently used).
    */
-  async get(key: string): Promise<T | undefined> {
+  get(key: K): V | undefined {
     const node = this.cache.get(key);
-    if (!node) {
-      // Try to load from store
-      const entry = await this.store.get(key);
-      if (entry) {
-        return await this.set(key, entry.value as T, entry.size);
-      }
-      return undefined;
-    }
+    if (!node) return undefined;
 
-    // Move to head (most recently used)
-    this.moveToHead(node);
-    node.entry.accessedAt = Date.now();
-    return node.entry.value;
+    // Move to front
+    this.moveToFront(node);
+    return node.value;
   }
 
   /**
-   * Sets a value in the cache, evicting LRU entries if necessary.
+   * Sets a value in the cache.
+   * Evicts LRU entries if size limit would be exceeded.
    */
-  async set(key: string, value: T, size?: number): Promise<T> {
-    // Calculate size if not provided
-    const entrySize = size ?? this.calculateSize(value);
-
-    // Check if we need to evict
-    while (this.currentSize + entrySize > this.maxSize && this.tail) {
-      await this.evictLRU();
+  set(key: K, value: V, size: number): void {
+    // Remove existing entry if present
+    const existingNode = this.cache.get(key);
+    if (existingNode) {
+      this.currentSize -= existingNode.size;
+      this.removeNode(existingNode);
     }
 
-    // If still too large after eviction, reject
-    if (this.currentSize + entrySize > this.maxSize) {
-      throw new Error(`Entry size ${entrySize} exceeds max cache size ${this.maxSize}`);
+    // Evict if necessary
+    while (this.currentSize + size > this.maxSize && this.tail) {
+      this.evictLRU();
     }
 
-    let node = this.cache.get(key);
-    if (node) {
-      // Update existing entry
-      this.currentSize -= node.entry.size;
-      node.entry.value = value;
-      node.entry.size = entrySize;
-      node.entry.accessedAt = Date.now();
-      this.currentSize += entrySize;
-      this.moveToHead(node);
-    } else {
-      // Create new entry
-      const entry: LRUEntry<T> = {
-        key,
-        value,
-        size: entrySize,
-        createdAt: Date.now(),
-        accessedAt: Date.now(),
-      };
-      node = new LRUNode(entry);
-      this.cache.set(key, node);
-      this.addToHead(node);
-      this.currentSize += entrySize;
+    // If still too large after eviction, don't add
+    if (this.currentSize + size > this.maxSize) {
+      return;
     }
 
-    // Persist to store
-    await this.store.set(key, value);
-
-    return value;
-  }
-
-  /**
-   * Deletes an entry from the cache.
-   */
-  async delete(key: string): Promise<boolean> {
-    const node = this.cache.get(key);
-    if (!node) {
-      return await this.store.delete(key);
-    }
-
-    this.removeNode(node);
-    this.cache.delete(key);
-    this.currentSize -= node.entry.size;
-
-    await this.store.delete(key);
-    return true;
+    // Add new node
+    const node: LRUNode<K, V> = { key, value, size, prev: null, next: null };
+    this.cache.set(key, node);
+    this.addToFront(node);
+    this.currentSize += size;
   }
 
   /**
    * Checks if a key exists in the cache.
    */
-  async has(key: string): Promise<boolean> {
-    if (this.cache.has(key)) {
-      return true;
-    }
-    return await this.store.has(key);
+  has(key: K): boolean {
+    return this.cache.has(key);
   }
 
   /**
-   * Gets the current cache size in bytes.
+   * Deletes a key from the cache.
    */
-  getCurrentSize(): number {
+  delete(key: K): boolean {
+    const node = this.cache.get(key);
+    if (!node) return false;
+
+    this.currentSize -= node.size;
+    this.removeNode(node);
+    this.cache.delete(key);
+    return true;
+  }
+
+  /**
+   * Clears the cache.
+   */
+  clear(): void {
+    this.cache.clear();
+    this.head = null;
+    this.tail = null;
+    this.currentSize = 0;
+  }
+
+  /**
+   * Gets the current size in bytes.
+   */
+  getSize(): number {
     return this.currentSize;
   }
 
   /**
-   * Gets the maximum cache size in bytes.
+   * Gets the maximum size in bytes.
    */
   getMaxSize(): number {
     return this.maxSize;
   }
 
   /**
-   * Evicts the least recently used entry.
+   * Gets the number of entries.
    */
-  private async evictLRU(): Promise<void> {
-    if (!this.tail) return;
-
-    const node = this.tail;
-    this.removeNode(node);
-    this.cache.delete(node.entry.key);
-    this.currentSize -= node.entry.size;
-
-    await this.store.delete(node.entry.key);
-
-    if (this.onEvict) {
-      this.onEvict(node.entry.key, node.entry);
-    }
-
-    logger.debug(
-      { key: node.entry.key, size: node.entry.size, remainingSize: this.currentSize },
-      'LRU entry evicted'
-    );
+  getCount(): number {
+    return this.cache.size;
   }
 
   /**
-   * Calculates the size of a value in bytes.
+   * Adds a node to the front of the list.
    */
-  private calculateSize(value: T): number {
-    return Buffer.byteLength(JSON.stringify(value), 'utf-8');
-  }
-
-  /**
-   * Adds a node to the head of the list (most recently used).
-   */
-  private addToHead(node: LRUNode<T>): void {
-    node.prev = null;
+  private addToFront(node: LRUNode<K, V>): void {
     node.next = this.head;
+    node.prev = null;
 
     if (this.head) {
       this.head.prev = node;
     }
-
     this.head = node;
 
     if (!this.tail) {
@@ -209,7 +144,7 @@ export class LRUCache<T = unknown> {
   /**
    * Removes a node from the list.
    */
-  private removeNode(node: LRUNode<T>): void {
+  private removeNode(node: LRUNode<K, V>): void {
     if (node.prev) {
       node.prev.next = node.next;
     } else {
@@ -227,30 +162,82 @@ export class LRUCache<T = unknown> {
   }
 
   /**
-   * Moves a node to the head of the list.
+   * Moves a node to the front of the list.
    */
-  private moveToHead(node: LRUNode<T>): void {
+  private moveToFront(node: LRUNode<K, V>): void {
+    if (node === this.head) return;
+
     this.removeNode(node);
-    this.addToHead(node);
+    this.addToFront(node);
+  }
+
+  /**
+   * Evicts the least recently used entry.
+   */
+  private evictLRU(): void {
+    if (!this.tail) return;
+
+    const lru = this.tail;
+    this.currentSize -= lru.size;
+    this.removeNode(lru);
+    this.cache.delete(lru.key);
   }
 }
 
 /**
- * Doubly-linked list node for LRU ordering.
+ * Creates an LRU cache with the given max size in bytes.
  */
-class LRUNode<T> {
-  entry: LRUEntry<T>;
-  prev: LRUNode<T> | null = null;
-  next: LRUNode<T> | null = null;
+export function createLRUCache<K, V>(maxSize: number): LRUCache<K, V> {
+  return new LRUCache<K, V>(maxSize);
+}
 
-  constructor(entry: LRUEntry<T>) {
-    this.entry = entry;
+/**
+ * LRU cache specifically for cache entries.
+ * Uses entry size for eviction decisions.
+ */
+export class CacheEntryLRUCache {
+  private lru: LRUCache<string, CacheEntry>;
+
+  constructor(maxSize: number) {
+    this.lru = new LRUCache<string, CacheEntry>(maxSize);
+  }
+
+  get(key: string): CacheEntry | undefined {
+    return this.lru.get(key);
+  }
+
+  set(key: string, entry: CacheEntry): void {
+    this.lru.set(key, entry, entry.size);
+  }
+
+  has(key: string): boolean {
+    return this.lru.has(key);
+  }
+
+  delete(key: string): boolean {
+    return this.lru.delete(key);
+  }
+
+  clear(): void {
+    this.lru.clear();
+  }
+
+  getSize(): number {
+    return this.lru.getSize();
+  }
+
+  getMaxSize(): number {
+    return this.lru.getMaxSize();
+  }
+
+  getCount(): number {
+    return this.lru.getCount();
   }
 }
 
 /**
- * Creates an LRUCache instance.
+ * Creates an LRU cache for cache entries with the given max size in bytes.
  */
-export function createLRUCache<T = unknown>(options: LRUCacheOptions<T>): LRUCache<T> {
-  return new LRUCache<T>(options);
+export function createCacheEntryLRUCache(maxSize: number): CacheEntryLRUCache {
+  return new CacheEntryLRUCache(maxSize);
 }

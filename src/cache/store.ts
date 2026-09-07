@@ -1,48 +1,38 @@
 /**
  * File-based cache store with atomic writes.
- * Uses temp file + rename for atomicity per T-01-16 mitigation.
+ * Uses temp file + rename for atomicity.
  */
 
-import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { createLogger } from '../logging/index.js';
-
-const logger = createLogger('cache:store');
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, readFile, rename, rmdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 
 /**
- * Options for CacheStore.
- */
-export interface CacheStoreOptions {
-  /** Root directory for cache storage */
-  rootDir: string;
-  /** Maximum cache size in bytes (default: 500MB) */
-  maxSize?: number;
-}
-
-/**
- * Cache entry metadata stored alongside the value.
+ * Cache entry metadata.
  */
 export interface CacheEntry<T = unknown> {
-  /** The cache key */
   key: string;
-  /** The cached value */
   value: T;
-  /** Timestamp when entry was created (ms since epoch) */
   createdAt: number;
-  /** Timestamp when entry was last accessed (ms since epoch) */
-  accessedAt: number;
-  /** Size of the value in bytes */
   size: number;
 }
 
 /**
- * File-based cache store with atomic writes and LRU eviction support.
+ * Cache store options.
  */
-export class CacheStore<T = unknown> {
+export interface CacheStoreOptions {
+  rootDir: string;
+  maxSize?: number; // in bytes
+}
+
+/**
+ * File-based cache store with atomic writes and size tracking.
+ */
+export class CacheStore {
   private rootDir: string;
   private maxSize: number;
   private currentSize: number = 0;
-  private initialized: boolean = false;
+  private sizeInitialized: boolean = false;
 
   constructor(options: CacheStoreOptions) {
     this.rootDir = options.rootDir;
@@ -50,94 +40,96 @@ export class CacheStore<T = unknown> {
   }
 
   /**
-   * Initializes the cache store by creating the root directory
-   * and calculating current cache size.
+   * Initializes the store by calculating current size.
    */
   async initialize(): Promise<void> {
-    if (this.initialized) return;
+    if (this.sizeInitialized) return;
 
     await mkdir(this.rootDir, { recursive: true });
-    await this.calculateCurrentSize();
-    this.initialized = true;
-    logger.info(
-      { rootDir: this.rootDir, currentSize: this.currentSize, maxSize: this.maxSize },
-      'Cache store initialized'
-    );
+    this.currentSize = await this.calculateDirectorySize(this.rootDir);
+    this.sizeInitialized = true;
   }
 
   /**
-   * Calculates the current cache size by scanning all files.
+   * Calculates the total size of a directory recursively.
    */
-  private async calculateCurrentSize(): Promise<void> {
+  private async calculateDirectorySize(dir: string): Promise<number> {
+    let totalSize = 0;
     try {
-      const files = await readdir(this.rootDir);
-      let totalSize = 0;
-      for (const file of files) {
-        const filePath = join(this.rootDir, file);
-        const stats = await stat(filePath);
-        totalSize += stats.size;
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = resolve(dir, entry.name);
+        if (entry.isDirectory()) {
+          totalSize += await this.calculateDirectorySize(fullPath);
+        } else if (entry.isFile()) {
+          const stats = await stat(fullPath);
+          totalSize += stats.size;
+        }
       }
-      this.currentSize = totalSize;
-    } catch (error) {
-      logger.warn({ error }, 'Failed to calculate cache size, assuming 0');
-      this.currentSize = 0;
+    } catch {
+      // Directory doesn't exist or other error
+    }
+    return totalSize;
+  }
+
+  /**
+   * Gets the cache entry for a key.
+   */
+  async get<T>(key: string): Promise<CacheEntry<T> | null> {
+    await this.initialize();
+    const filePath = this.keyToFilePath(key);
+
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      const entry = JSON.parse(content) as CacheEntry<T>;
+      return entry;
+    } catch {
+      return null;
     }
   }
 
   /**
-   * Gets the file path for a cache key.
+   * Sets a cache entry with atomic write.
    */
-  private getFilePath(key: string): string {
-    // Use the key directly as filename (it's already a hash-based string)
-    // Replace any remaining problematic characters
-    const safeKey = key.replace(/[/\\:]/g, '_');
-    return join(this.rootDir, safeKey);
-  }
-
-  /**
-   * Writes a cache entry atomically using temp file + rename.
-   */
-  async set(key: string, value: T): Promise<void> {
+  async set<T>(key: string, value: T): Promise<void> {
     await this.initialize();
 
-    // Calculate value size separately (without metadata)
-    const valueSize = Buffer.byteLength(JSON.stringify(value), 'utf-8');
-    const metadataSize = 100; // Approximate overhead for key, timestamps, etc.
+    // First serialize without size to get the content size
+    const tempEntry: CacheEntry<T> = {
+      key,
+      value,
+      createdAt: Date.now(),
+      size: 0,
+    };
+    const tempSerialized = JSON.stringify(tempEntry);
+    const contentSize = Buffer.byteLength(tempSerialized, 'utf-8');
 
     const entry: CacheEntry<T> = {
       key,
       value,
       createdAt: Date.now(),
-      accessedAt: Date.now(),
-      size: valueSize + metadataSize,
+      size: contentSize,
     };
 
     const serialized = JSON.stringify(entry);
 
-    // Check if adding this entry would exceed max size
-    if (this.currentSize + entry.size > this.maxSize) {
-      logger.warn(
-        { key, entrySize: entry.size, currentSize: this.currentSize, maxSize: this.maxSize },
-        'Cache size limit would be exceeded'
-      );
-      // Note: LRU eviction is handled by the LRUCache wrapper
-    }
+    // Check if we need to evict before writing
+    await this.ensureSpace(entry.size);
 
-    const filePath = this.getFilePath(key);
-    const tempPath = `${filePath}.tmp`;
+    const filePath = this.keyToFilePath(key);
+    const dir = dirname(filePath);
+    await mkdir(dir, { recursive: true });
+
+    // Atomic write: write to temp file, then rename
+    const tempPath = `${filePath}.tmp.${createHash('sha256')
+      .update(key + Date.now().toString())
+      .digest('hex')
+      .substring(0, 8)}`;
 
     try {
-      // Ensure parent directory exists
-      await mkdir(dirname(filePath), { recursive: true });
-
-      // Write to temp file
       await writeFile(tempPath, serialized, 'utf-8');
-
-      // Atomic rename
       await rename(tempPath, filePath);
-
       this.currentSize += entry.size;
-      logger.debug({ key, size: entry.size, currentSize: this.currentSize }, 'Cache entry written');
     } catch (error) {
       // Clean up temp file on error
       try {
@@ -145,45 +137,7 @@ export class CacheStore<T = unknown> {
       } catch {
         // Ignore cleanup errors
       }
-      logger.error({ key, error }, 'Failed to write cache entry');
       throw error;
-    }
-  }
-
-  /**
-   * Reads a cache entry.
-   */
-  async get(key: string): Promise<CacheEntry<T> | null> {
-    await this.initialize();
-
-    const filePath = this.getFilePath(key);
-
-    try {
-      const content = await readFile(filePath, 'utf-8');
-      const entry = JSON.parse(content) as CacheEntry<T>;
-
-      // Validate key matches
-      if (entry.key !== key) {
-        logger.warn({ key, storedKey: entry.key }, 'Cache key mismatch');
-        return null;
-      }
-
-      // Update accessed time in the stored file
-      entry.accessedAt = Date.now();
-      const updatedContent = JSON.stringify(entry);
-      const tempPath = `${filePath}.tmp`;
-      await writeFile(tempPath, updatedContent, 'utf-8');
-      await rename(tempPath, filePath);
-
-      logger.debug({ key }, 'Cache hit');
-      return entry;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        logger.debug({ key }, 'Cache miss');
-        return null;
-      }
-      logger.error({ key, error }, 'Failed to read cache entry');
-      return null;
     }
   }
 
@@ -192,32 +146,26 @@ export class CacheStore<T = unknown> {
    */
   async delete(key: string): Promise<boolean> {
     await this.initialize();
-
-    const filePath = this.getFilePath(key);
+    const filePath = this.keyToFilePath(key);
 
     try {
       const stats = await stat(filePath);
       await unlink(filePath);
       this.currentSize -= stats.size;
-      logger.debug({ key, freedSize: stats.size }, 'Cache entry deleted');
       return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return false;
-      }
-      logger.error({ key, error }, 'Failed to delete cache entry');
+    } catch {
       return false;
     }
   }
 
   /**
-   * Checks if a cache entry exists.
+   * Checks if a key exists in the cache.
    */
   async has(key: string): Promise<boolean> {
     await this.initialize();
-    const filePath = this.getFilePath(key);
+    const filePath = this.keyToFilePath(key);
     try {
-      await stat(filePath);
+      await access(filePath);
       return true;
     } catch {
       return false;
@@ -227,7 +175,8 @@ export class CacheStore<T = unknown> {
   /**
    * Gets the current cache size in bytes.
    */
-  getCurrentSize(): number {
+  async getSize(): Promise<number> {
+    await this.initialize();
     return this.currentSize;
   }
 
@@ -239,31 +188,117 @@ export class CacheStore<T = unknown> {
   }
 
   /**
-   * Lists all cache keys.
-   */
-  async keys(): Promise<string[]> {
-    await this.initialize();
-    const files = await readdir(this.rootDir);
-    return files.filter((f) => !f.endsWith('.tmp')).map((f) => f.replace(/_/g, ':'));
-  }
-
-  /**
    * Clears all cache entries.
    */
   async clear(): Promise<void> {
     await this.initialize();
-    const files = await readdir(this.rootDir);
-    await Promise.all(
-      files.filter((f) => !f.endsWith('.tmp')).map((f) => unlink(join(this.rootDir, f)))
-    );
+    await this.clearDirectory(this.rootDir);
     this.currentSize = 0;
-    logger.info('Cache cleared');
+  }
+
+  /**
+   * Recursively clears a directory.
+   */
+  private async clearDirectory(dir: string): Promise<void> {
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = resolve(dir, entry.name);
+        if (entry.isDirectory()) {
+          await this.clearDirectory(fullPath);
+          try {
+            await rmdir(fullPath);
+          } catch {
+            // Ignore errors removing empty directories
+          }
+        } else if (entry.isFile()) {
+          await unlink(fullPath);
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Ensures there's enough space for a new entry.
+   * Evicts LRU entries if necessary.
+   */
+  private async ensureSpace(requiredSize: number): Promise<void> {
+    if (this.currentSize + requiredSize <= this.maxSize) {
+      return;
+    }
+
+    // Collect all entries with their creation times (including subdirectories)
+    const entries: Array<{ path: string; createdAt: number; size: number }> = [];
+
+    await this.collectEntries(this.rootDir, entries);
+
+    // Sort by creation time (oldest first)
+    entries.sort((a, b) => a.createdAt - b.createdAt);
+
+    // Evict oldest entries until we have enough space
+    for (const entry of entries) {
+      if (this.currentSize + requiredSize <= this.maxSize) {
+        break;
+      }
+      await unlink(entry.path);
+      this.currentSize -= entry.size;
+    }
+  }
+
+  /**
+   * Recursively collects all cache entries from a directory.
+   */
+  private async collectEntries(
+    dir: string,
+    entries: Array<{ path: string; createdAt: number; size: number }>
+  ): Promise<void> {
+    try {
+      const files = await readdir(dir, { withFileTypes: true });
+      for (const file of files) {
+        const filePath = resolve(dir, file.name);
+        if (file.isDirectory()) {
+          await this.collectEntries(filePath, entries);
+        } else if (file.isFile()) {
+          try {
+            const stats = await stat(filePath);
+            const content = await readFile(filePath, 'utf-8');
+            const entry = JSON.parse(content) as CacheEntry;
+            entries.push({
+              path: filePath,
+              createdAt: entry.createdAt,
+              size: stats.size,
+            });
+          } catch {
+            // Skip invalid entries
+          }
+        }
+      }
+    } catch {
+      // No files to evict
+    }
+  }
+
+  /**
+   * Converts a cache key to a file path.
+   * Uses subdirectories based on key prefix for better filesystem performance.
+   */
+  private keyToFilePath(key: string): string {
+    const hash = createHash('sha256').update(key).digest('hex');
+    const prefix = hash.substring(0, 2);
+    return resolve(this.rootDir, prefix, hash);
   }
 }
 
 /**
- * Creates a CacheStore instance.
+ * Creates a cache store with the given options.
  */
-export function createCacheStore<T = unknown>(options: CacheStoreOptions): CacheStore<T> {
-  return new CacheStore<T>(options);
+export async function createCacheStore(options: CacheStoreOptions): Promise<CacheStore> {
+  const store = new CacheStore(options);
+  await store.initialize();
+  return store;
 }
+
+// Re-export access for internal use
+import { access } from 'node:fs/promises';

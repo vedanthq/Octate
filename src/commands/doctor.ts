@@ -3,14 +3,14 @@
  */
 
 import { Command } from 'commander';
-import { createLogger } from '../logging/index.js';
-import { loadConfig } from '../config/merger.js';
-import { findGitRoot } from '../repository/discovery.js';
 import { getCacheDir, initializeProjectCache } from '../cache/identity.js';
-import { CacheStore, createCacheStore } from '../cache/store.js';
-import { ConfigurationError, GitError, InternalError } from '../errors/index.js';
+import { createCacheStore } from '../cache/store.js';
+import { loadConfig } from '../config/merger.js';
+import { ConfigurationError } from '../errors/index.js';
+import { createLogger } from '../logging/index.js';
+import { findGitRoot } from '../repository/discovery.js';
 
-const logger = createLogger('commands:doctor');
+const _logger = createLogger('commands:doctor');
 
 /**
  * Creates the doctor command for Commander.js.
@@ -101,7 +101,7 @@ async function runDoctor(options: DoctorOptions): Promise<void> {
 /**
  * Checks configuration validity.
  */
-async function checkConfiguration(options: DoctorOptions): Promise<DoctorCheck> {
+async function checkConfiguration(_options: DoctorOptions): Promise<DoctorCheck> {
   try {
     const config = await loadConfig({
       cliConfig: {},
@@ -155,10 +155,10 @@ async function checkGitAccess(): Promise<DoctorCheck> {
 
     // Try to read Git status
     const { status } = await import('isomorphic-git');
-    const gitStatus = await status({ 
-      fs: (await import('node:fs/promises')).default, 
+    const gitStatus = await status({
+      fs: (await import('node:fs/promises')).default,
       dir: repoRoot,
-      filepath: '.'
+      filepath: '.',
     });
 
     return {
@@ -204,8 +204,8 @@ async function checkNvidiaConnectivity(): Promise<DoctorCheck> {
     const response = await fetch('https://integrate.api.nvidia.com/v1/models', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
       },
       signal: controller.signal,
     });
@@ -214,9 +214,7 @@ async function checkNvidiaConnectivity(): Promise<DoctorCheck> {
 
     if (response.ok) {
       const data = (await response.json()) as { data?: Array<{ id: string }> };
-      const nemotronAvailable = data.data?.some(
-        (model) => model.id.includes('nemotron-3-ultra')
-      );
+      const nemotronAvailable = data.data?.some((model) => model.id.includes('nemotron-3-ultra'));
 
       return {
         name: 'NVIDIA API',
@@ -279,7 +277,7 @@ async function checkCacheHealth(): Promise<DoctorCheck> {
 
     // Get cache stats
     let size = 0;
-    let entryCount = 0;
+    const entryCount = 0;
     try {
       const { stat } = await import('node:fs/promises');
       const stats = await stat(cacheDir);

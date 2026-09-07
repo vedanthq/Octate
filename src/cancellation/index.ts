@@ -10,9 +10,9 @@ export {
 } from './controller.js';
 
 export {
-  spawnWithSignal,
   killProcessTree,
-  SubprocessError,
   type SpawnWithSignalOptions,
+  SubprocessError,
   type SubprocessResult,
+  spawnWithSignal,
 } from './subprocess.js';

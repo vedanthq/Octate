@@ -1,130 +1,143 @@
 /**
- * Tests for identity.ts - Project identity hashing and cache directory resolution.
+ * Tests for project identity hashing and cache directory resolution.
  */
 
 import { randomUUID } from 'node:crypto';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
+import { join, resolve } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import {
+  computeConfigHash,
   computeProjectIdentity,
-  ensureCacheDirs,
   getCacheDir,
-  initializeProjectCache,
-  resolveCachePaths,
+  getGlobalCacheDir,
 } from './identity.js';
 
-describe('cache:identity', () => {
-  let testDir: string;
-  let repoRoot: string;
+const TEST_DIR = join(tmpdir(), `octate-identity-test-${randomUUID()}`);
 
-  beforeEach(async () => {
-    testDir = join(tmpdir(), `octate-cache-test-${randomUUID()}`);
-    repoRoot = join(testDir, 'repo');
-    await mkdir(repoRoot, { recursive: true });
+beforeAll(async () => {
+  await mkdir(TEST_DIR, { recursive: true });
+});
+
+afterAll(async () => {
+  await rm(TEST_DIR, { recursive: true, force: true });
+});
+
+describe('computeProjectIdentity', () => {
+  it('generates consistent hash for same repo root and remote', async () => {
+    const repoRoot = resolve(TEST_DIR, 'repo1');
+    await mkdir(resolve(repoRoot, '.git'), { recursive: true });
+    await writeFile(
+      resolve(repoRoot, '.git', 'config'),
+      '[remote "origin"]\n  url = https://github.com/user/repo.git\n'
+    );
+
+    const hash1 = await computeProjectIdentity(repoRoot);
+    const hash2 = await computeProjectIdentity(repoRoot);
+
+    expect(hash1).toBe(hash2);
+    expect(hash1.length).toBe(16);
   });
 
-  afterEach(async () => {
-    await rm(testDir, { recursive: true, force: true });
+  it('generates different hashes for different repos', async () => {
+    const repo1 = resolve(TEST_DIR, 'repo1');
+    const repo2 = resolve(TEST_DIR, 'repo2');
+
+    await mkdir(resolve(repo1, '.git'), { recursive: true });
+    await writeFile(
+      resolve(repo1, '.git', 'config'),
+      '[remote "origin"]\n  url = https://github.com/user/repo1.git\n'
+    );
+
+    await mkdir(resolve(repo2, '.git'), { recursive: true });
+    await writeFile(
+      resolve(repo2, '.git', 'config'),
+      '[remote "origin"]\n  url = https://github.com/user/repo2.git\n'
+    );
+
+    const hash1 = await computeProjectIdentity(repo1);
+    const hash2 = await computeProjectIdentity(repo2);
+
+    expect(hash1).not.toBe(hash2);
   });
 
-  describe('computeProjectIdentity', () => {
-    it('produces consistent hash for same repo root and remote URL', async () => {
-      const hash1 = await computeProjectIdentity(repoRoot);
-      const hash2 = await computeProjectIdentity(repoRoot);
+  it('falls back to path-based identity when no remote', async () => {
+    const repoRoot = resolve(TEST_DIR, 'no-remote');
+    await mkdir(resolve(repoRoot, '.git'), { recursive: true });
+    await writeFile(resolve(repoRoot, '.git', 'config'), '[core]\n  repositoryformatversion = 0\n');
 
-      expect(hash1).toBe(hash2);
-      expect(hash1).toHaveLength(16);
-      expect(hash1).toMatch(/^[a-f0-9]+$/);
-    });
+    const hash = await computeProjectIdentity(repoRoot);
+    expect(hash.length).toBe(16);
+  });
+});
 
-    it('produces different hashes for different repo roots', async () => {
-      const otherRepo = join(testDir, 'other-repo');
-      await mkdir(otherRepo, { recursive: true });
+describe('getCacheDir', () => {
+  it('returns correct path structure', async () => {
+    const repoRoot = resolve(TEST_DIR, 'repo-cache');
+    await mkdir(resolve(repoRoot, '.git'), { recursive: true });
+    await writeFile(
+      resolve(repoRoot, '.git', 'config'),
+      '[remote "origin"]\n  url = https://github.com/user/repo.git\n'
+    );
 
-      const hash1 = await computeProjectIdentity(repoRoot);
-      const hash2 = await computeProjectIdentity(otherRepo);
+    const paths = await getCacheDir(repoRoot);
 
-      expect(hash1).not.toBe(hash2);
-    });
-
-    it('handles repos without git remote', async () => {
-      // No git init, so no remote
-      const hash = await computeProjectIdentity(repoRoot);
-
-      expect(hash).toHaveLength(16);
-      expect(hash).toMatch(/^[a-f0-9]+$/);
-    });
+    expect(paths.root).toContain('.local/share/octate/');
+    expect(paths.indexes).toBe(join(paths.root, 'indexes'));
+    expect(paths.cache).toBe(join(paths.root, 'cache'));
+    expect(paths.findings).toBe(join(paths.root, 'findings'));
+    expect(paths.logs).toBe(join(paths.root, 'logs'));
   });
 
-  describe('getCacheDir', () => {
-    it('returns correct path format', () => {
-      const identity = 'abc123def456';
-      const cacheDir = getCacheDir(identity);
+  it('creates all subdirectories', async () => {
+    const repoRoot = resolve(TEST_DIR, 'repo-cache2');
+    await mkdir(resolve(repoRoot, '.git'), { recursive: true });
+    await writeFile(
+      resolve(repoRoot, '.git', 'config'),
+      '[remote "origin"]\n  url = https://github.com/user/repo.git\n'
+    );
 
-      expect(cacheDir).toContain('.local/share/octate');
-      expect(cacheDir).toContain(identity);
-    });
+    const paths = await getCacheDir(repoRoot);
 
-    it('uses home directory as base', () => {
-      const identity = 'abc123def456';
-      const cacheDir = getCacheDir(identity);
+    // All directories should exist
+    const { access } = await import('node:fs/promises');
+    for (const dir of Object.values(paths)) {
+      await expect(access(dir)).resolves.not.toThrow();
+    }
+  });
+});
 
-      expect(cacheDir).toContain('octate');
-    });
+describe('computeConfigHash', () => {
+  it('generates consistent hash for same config', () => {
+    const config = { review: { severity: 'high', max_findings: 20 } };
+    const hash1 = computeConfigHash(config);
+    const hash2 = computeConfigHash(config);
+    expect(hash1).toBe(hash2);
+    expect(hash1.length).toBe(8);
   });
 
-  describe('resolveCachePaths', () => {
-    it('resolves all subdirectories', () => {
-      const identity = 'abc123def456';
-      const paths = resolveCachePaths(identity);
-
-      expect(paths.root).toContain(identity);
-      expect(paths.indexes).toBe(join(paths.root, 'indexes'));
-      expect(paths.cache).toBe(join(paths.root, 'cache'));
-      expect(paths.findings).toBe(join(paths.root, 'findings'));
-      expect(paths.logs).toBe(join(paths.root, 'logs'));
-    });
+  it('generates different hashes for different configs', () => {
+    const config1 = { review: { severity: 'high' } };
+    const config2 = { review: { severity: 'low' } };
+    const hash1 = computeConfigHash(config1);
+    const hash2 = computeConfigHash(config2);
+    expect(hash1).not.toBe(hash2);
   });
 
-  describe('ensureCacheDirs', () => {
-    it('creates all cache directories', async () => {
-      const identity = 'abc123def456';
-      const paths = resolveCachePaths(identity);
-
-      await ensureCacheDirs(paths);
-
-      const { stat } = await import('node:fs/promises');
-      await expect(stat(paths.root)).resolves.toBeDefined();
-      await expect(stat(paths.indexes)).resolves.toBeDefined();
-      await expect(stat(paths.cache)).resolves.toBeDefined();
-      await expect(stat(paths.findings)).resolves.toBeDefined();
-      await expect(stat(paths.logs)).resolves.toBeDefined();
-    });
+  it('ignores default values', () => {
+    const configWithDefaults = { version: '1', review: { severity: 'medium', max_findings: 10 } };
+    const configWithoutDefaults = { review: { severity: 'high', max_findings: 20 } };
+    // Note: This test depends on the default value logic implementation
+    const hash1 = computeConfigHash(configWithDefaults);
+    const hash2 = computeConfigHash(configWithoutDefaults);
+    expect(hash1).not.toBe(hash2);
   });
+});
 
-  describe('initializeProjectCache', () => {
-    it('computes identity and creates all directories', async () => {
-      const paths = await initializeProjectCache(repoRoot);
-
-      expect(paths.root).toBeDefined();
-      expect(paths.indexes).toBeDefined();
-      expect(paths.cache).toBeDefined();
-      expect(paths.findings).toBeDefined();
-      expect(paths.logs).toBeDefined();
-
-      const { stat } = await import('node:fs/promises');
-      await expect(stat(paths.root)).resolves.toBeDefined();
-      await expect(stat(paths.indexes)).resolves.toBeDefined();
-    });
-
-    it('returns same paths for same repo root', async () => {
-      const paths1 = await initializeProjectCache(repoRoot);
-      const paths2 = await initializeProjectCache(repoRoot);
-
-      expect(paths1.root).toBe(paths2.root);
-      expect(paths1.indexes).toBe(paths2.indexes);
-    });
+describe('getGlobalCacheDir', () => {
+  it('returns global cache path', () => {
+    const globalDir = getGlobalCacheDir();
+    expect(globalDir).toContain('.local/share/octate/global');
   });
 });

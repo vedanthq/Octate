@@ -2,9 +2,8 @@
  * Tests for commands/review.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { createReviewCommand } from './review.js';
-import { ConfigurationError } from '../errors/index.js';
 
 describe('commands:review', () => {
   let command: ReturnType<typeof createReviewCommand>;

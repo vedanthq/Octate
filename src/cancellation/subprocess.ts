@@ -3,7 +3,7 @@
  * Subprocesses (tsc, ruff, pytest, bandit) spawned with signal option auto-kill on abort (D-19).
  */
 
-import { spawn, ChildProcess, SpawnOptions } from 'node:child_process';
+import { type SpawnOptions, spawn } from 'node:child_process';
 import { createLogger } from '../logging/index.js';
 
 const logger = createLogger('cancellation:subprocess');
@@ -77,10 +77,15 @@ export function spawnWithSignal(
 
   // Check if already aborted before spawning
   if (signal?.aborted) {
-    return Promise.reject(new SubprocessError(
-      'Aborted before spawn',
-      { code: 'ABORTED', signal: 'SIGABRT', exitCode: null, command, args }
-    ));
+    return Promise.reject(
+      new SubprocessError('Aborted before spawn', {
+        code: 'ABORTED',
+        signal: 'SIGABRT',
+        exitCode: null,
+        command,
+        args,
+      })
+    );
   }
 
   return new Promise((resolve, reject) => {
@@ -145,10 +150,15 @@ export function spawnWithSignal(
       timeoutId = setTimeout(() => {
         logger.warn({ command, args, timeout }, 'Subprocess timed out, killing...');
         killProcessTree(child.pid!);
-        rejectOnce(new SubprocessError(
-          `Subprocess timed out after ${timeout}ms`,
-          { code: 'TIMEOUT', signal: 'SIGKILL', exitCode: null, command, args }
-        ));
+        rejectOnce(
+          new SubprocessError(`Subprocess timed out after ${timeout}ms`, {
+            code: 'TIMEOUT',
+            signal: 'SIGKILL',
+            exitCode: null,
+            command,
+            args,
+          })
+        );
       }, timeout);
     }
 
@@ -168,10 +178,15 @@ export function spawnWithSignal(
 
     // Handle process exit
     child.on('error', (error) => {
-      rejectOnce(new SubprocessError(
-        `Failed to spawn subprocess: ${error.message}`,
-        { code: 'SPAWN_ERROR', signal: null, exitCode: null, command, args }
-      ));
+      rejectOnce(
+        new SubprocessError(`Failed to spawn subprocess: ${error.message}`, {
+          code: 'SPAWN_ERROR',
+          signal: null,
+          exitCode: null,
+          command,
+          args,
+        })
+      );
     });
 
     child.on('exit', (exitCode, signalCode) => {
