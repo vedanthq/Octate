@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Repository (REPO)
 
-- [ ] **REPO-01**: Discover and analyze the local Git repository (working tree, staged changes, commit ranges, branch comparisons)
-- [ ] **REPO-02**: Generate Git diffs for the selected review scope with base/head/changed files/lines explicitly known
+- [x] **REPO-01**: Discover and analyze the local Git repository (working tree, staged changes, commit ranges, branch comparisons)
+- [x] **REPO-02**: Generate Git diffs for the selected review scope with base/head/changed files/lines explicitly known
 - [ ] **REPO-03**: Handle monorepos, symlinks, large files, binary files, generated files, ignored files, vendor dirs, node_modules, build output, and unusual Git worktrees safely
-- [ ] **REPO-04**: Auto-detect Git root, workspace, and monorepo configuration on `cd repo && octate review`
+- [x] **REPO-04**: Auto-detect Git root, workspace, and monorepo configuration on `cd repo && octate review`
 
 ### Parsing (PARSE)
 
@@ -58,8 +58,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Configuration (CONF)
 
-- [ ] **CONF-01**: Configuration via `octate.yaml` with version, project name, review severity/max_findings, rules, architecture boundaries/forbidden_dependencies, ignore patterns
-- [ ] **CONF-02**: Configuration precedence: built-in defaults → global config → project octate.yaml → env vars → CLI args
+- [x] **CONF-01**: Configuration via `octate.yaml` with version, project name, review severity/max_findings, rules, architecture boundaries/forbidden_dependencies, ignore patterns
+- [x] **CONF-02**: Configuration precedence: built-in defaults → global config → project octate.yaml → env vars → CLI args
 
 ### Cache (CACHE)
 
@@ -132,10 +132,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REPO-01 | Phase 1 | Pending |
-| REPO-02 | Phase 1 | Pending |
+| REPO-01 | Phase 1 | Complete |
+| REPO-02 | Phase 1 | Complete |
 | REPO-03 | Phase 1 | Pending |
-| REPO-04 | Phase 1 | Pending |
+| REPO-04 | Phase 1 | Complete |
 | PARSE-01 | Phase 2 | Pending |
 | PARSE-02 | Phase 2 | Pending |
 | PARSE-03 | Phase 3 | Pending |
@@ -157,8 +157,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TUI-03 | Phase 7 | Pending |
 | OUT-01 | Phase 7 | Pending |
 | OUT-02 | Phase 6 | Pending |
-| CONF-01 | Phase 1 | Pending |
-| CONF-02 | Phase 1 | Pending |
+| CONF-01 | Phase 1 | Complete |
+| CONF-02 | Phase 1 | Complete |
 | CACHE-01 | Phase 1 | Pending |
 | CACHE-02 | Phase 1 | Pending |
 | CACHE-03 | Phase 1 | Pending |
