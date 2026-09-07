@@ -280,7 +280,7 @@ export async function expandWorkspacePatterns(
  */
 export async function aggregateWorkspaces(
   repoRoot: string,
-  type: MonorepoType,
+  _type: MonorepoType,
   workspacePaths: string[]
 ): Promise<string[]> {
   const expanded = await expandWorkspacePatterns(repoRoot, workspacePaths);

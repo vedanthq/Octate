@@ -6,14 +6,14 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import * as git from 'isomorphic-git';
 import {
-  resolveRef,
-  getLog,
-  getStatus,
-  getDiff,
   getChangedFiles,
-  getStagedDiff,
-  getWorkingDiff,
+  getDiff,
+  getLog,
   getParentCommit,
+  getStagedDiff,
+  getStatus,
+  getWorkingDiff,
+  resolveRef,
 } from './git.js';
 
 describe('Git operations', () => {

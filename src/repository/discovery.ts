@@ -4,10 +4,10 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { detectMonorepo, aggregateWorkspaces, type MonorepoType } from './monorepo.js';
-import type { Repository, Workspace } from '../types/index.js';
-import { createLogger } from '../logging/index.js';
 import { createRepositoryError } from '../errors/index.js';
+import { createLogger } from '../logging/index.js';
+import type { Repository, Workspace } from '../types/index.js';
+import { aggregateWorkspaces, detectMonorepo } from './monorepo.js';
 
 const logger = createLogger('repository:discovery');
 
@@ -66,7 +66,11 @@ export async function detectWorkspace(repoRoot: string): Promise<Repository['mon
   }
 
   // Use the exported aggregateWorkspaces which handles glob expansion
-  const workspacePaths = await aggregateWorkspaces(repoRoot, monorepoConfig.type, monorepoConfig.workspaces);
+  const workspacePaths = await aggregateWorkspaces(
+    repoRoot,
+    monorepoConfig.type,
+    monorepoConfig.workspaces
+  );
 
   return {
     type: monorepoConfig.type,

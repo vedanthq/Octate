@@ -3,35 +3,51 @@
  * Exports all repository layer functionality.
  */
 
+export type { FileChange, Repository, ReviewScope, Workspace } from '../types/index.js';
 export {
-  findGitRoot,
   detectWorkspace,
   discoverRepository,
+  findGitRoot,
 } from './discovery.js';
+export {
+  createFileFilter,
+  type FileAnalysisResult,
+  type FileFilter,
+  type FileFilterOptions,
+  isBinaryFile,
+  isGeneratedFile,
+  isSymlinkSafe,
+  shouldAnalyzeFile,
+} from './filter.js';
+export {
+  getChangedFiles,
+  getDiff,
+  getLog,
+  getStagedDiff,
+  getStatus,
+  getWorkingDiff,
+  resolveRef,
+} from './git.js';
 
 export {
-  detectMonorepo,
+  createIgnoreMatcher,
+  createWorkspaceIgnoreMatcher,
+  type IgnoreMatcher,
+  type IgnoreParseResult,
+  loadIgnorePatterns,
+  normalizePathForIgnore,
+  parseIgnoreFile,
+} from './ignore.js';
+export {
   aggregateWorkspaces,
+  detectMonorepo,
   expandWorkspacePatterns,
   type MonorepoConfig,
   type MonorepoType,
 } from './monorepo.js';
-
 export {
-  resolveRef,
-  getLog,
-  getStatus,
-  getDiff,
-  getChangedFiles,
-  getStagedDiff,
-  getWorkingDiff,
-} from './git.js';
-
-export {
-  resolveScope,
   parseRange,
-  validateRef,
+  resolveScope,
   type ScopeOptions,
+  validateRef,
 } from './scope.js';
-
-export type { ReviewScope, FileChange, Repository, Workspace } from '../types/index.js';

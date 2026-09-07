@@ -4,11 +4,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import {
-  detectMonorepo,
-  expandWorkspacePatterns,
-  aggregateWorkspaces,
-} from './monorepo.js';
+import { aggregateWorkspaces, detectMonorepo, expandWorkspacePatterns } from './monorepo.js';
 
 describe('detectMonorepo', () => {
   let testDir: string;
@@ -24,10 +20,7 @@ describe('detectMonorepo', () => {
   });
 
   it('detects pnpm workspace', async () => {
-    await fs.writeFile(
-      path.join(testDir, 'pnpm-workspace.yaml'),
-      `packages:\n  - packages/*\n`
-    );
+    await fs.writeFile(path.join(testDir, 'pnpm-workspace.yaml'), `packages:\n  - packages/*\n`);
     await fs.mkdir(path.join(testDir, 'packages', 'pkg1'), { recursive: true });
 
     const result = await detectMonorepo(testDir);
@@ -92,7 +85,10 @@ describe('detectMonorepo', () => {
   });
 
   it('returns null when no monorepo config', async () => {
-    await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({ name: 'single' }, null, 2));
+    await fs.writeFile(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ name: 'single' }, null, 2)
+    );
     const result = await detectMonorepo(testDir);
     expect(result).toBeNull();
   });
@@ -152,7 +148,10 @@ describe('expandWorkspacePatterns', () => {
   it('skips non-existent directories', async () => {
     await fs.mkdir(path.join(testDir, 'packages', 'pkg1'), { recursive: true });
 
-    const result = await expandWorkspacePatterns(testDir, ['packages/pkg1', 'packages/nonexistent']);
+    const result = await expandWorkspacePatterns(testDir, [
+      'packages/pkg1',
+      'packages/nonexistent',
+    ]);
     expect(result).toContain('packages/pkg1');
     expect(result).not.toContain('packages/nonexistent');
   });

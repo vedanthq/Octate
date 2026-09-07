@@ -4,7 +4,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { findGitRoot, detectWorkspace, discoverRepository } from './discovery.js';
+import { detectWorkspace, discoverRepository, findGitRoot } from './discovery.js';
 import { detectMonorepo } from './monorepo.js';
 
 describe('findGitRoot', () => {
@@ -82,8 +82,8 @@ describe('detectWorkspace', () => {
     expect(result).toBeDefined();
     expect(result?.type).toBe('pnpm');
     // workspaces contains expanded absolute paths
-    expect(result?.workspaces.some(w => w.includes('packages/pkg1'))).toBe(true);
-    expect(result?.workspaces.some(w => w.includes('apps/app1'))).toBe(true);
+    expect(result?.workspaces.some((w) => w.includes('packages/pkg1'))).toBe(true);
+    expect(result?.workspaces.some((w) => w.includes('apps/app1'))).toBe(true);
   });
 
   it('detects npm/yarn workspace', async () => {
@@ -138,7 +138,10 @@ describe('detectWorkspace', () => {
   });
 
   it('returns undefined for non-monorepo', async () => {
-    await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({ name: 'single' }, null, 2));
+    await fs.writeFile(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ name: 'single' }, null, 2)
+    );
     const result = await detectWorkspace(testDir);
     expect(result).toBeUndefined();
   });
@@ -153,7 +156,10 @@ describe('discoverRepository', () => {
     testDir = await fs.mkdtemp(path.join('/tmp', 'octate-test-'));
     await fs.mkdir(path.join(testDir, '.git'), { recursive: true });
     await fs.writeFile(path.join(testDir, '.git', 'HEAD'), 'ref: refs/heads/main');
-    await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({ name: 'test-repo' }, null, 2));
+    await fs.writeFile(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ name: 'test-repo' }, null, 2)
+    );
   });
 
   afterEach(async () => {
@@ -201,7 +207,10 @@ describe('detectMonorepo', () => {
 
   it('prioritizes pnpm over npm', async () => {
     await fs.writeFile(path.join(testDir, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
-    await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({ name: 'root', workspaces: ['packages/*'] }, null, 2));
+    await fs.writeFile(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: ['packages/*'] }, null, 2)
+    );
     await fs.writeFile(path.join(testDir, 'package-lock.json'), '{}');
     await fs.mkdir(path.join(testDir, 'packages', 'pkg1'), { recursive: true });
 
@@ -212,7 +221,10 @@ describe('detectMonorepo', () => {
 
   it('prioritizes npm over turbo', async () => {
     await fs.writeFile(path.join(testDir, 'turbo.json'), JSON.stringify({ pipeline: {} }, null, 2));
-    await fs.writeFile(path.join(testDir, 'package.json'), JSON.stringify({ name: 'root', workspaces: ['packages/*'] }, null, 2));
+    await fs.writeFile(
+      path.join(testDir, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: ['packages/*'] }, null, 2)
+    );
     await fs.writeFile(path.join(testDir, 'package-lock.json'), '{}');
     await fs.mkdir(path.join(testDir, 'packages', 'pkg1'), { recursive: true });
 
@@ -222,7 +234,10 @@ describe('detectMonorepo', () => {
   });
 
   it('prioritizes turbo over nx when no npm workspaces', async () => {
-    await fs.writeFile(path.join(testDir, 'turbo.json'), JSON.stringify({ packages: ['packages/*'] }, null, 2));
+    await fs.writeFile(
+      path.join(testDir, 'turbo.json'),
+      JSON.stringify({ packages: ['packages/*'] }, null, 2)
+    );
     await fs.writeFile(path.join(testDir, 'nx.json'), JSON.stringify({ projects: {} }, null, 2));
     await fs.mkdir(path.join(testDir, 'packages', 'pkg1'), { recursive: true });
 

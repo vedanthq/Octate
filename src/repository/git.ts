@@ -6,9 +6,9 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import * as git from 'isomorphic-git';
-import type { FileChange } from '../types/index.js';
-import { createLogger } from '../logging/index.js';
 import { createGitError } from '../errors/index.js';
+import { createLogger } from '../logging/index.js';
+import type { FileChange } from '../types/index.js';
 
 const logger = createLogger('repository:git');
 
@@ -29,12 +29,15 @@ export async function resolveRef(repoRoot: string, ref: string): Promise<string>
     const oid = await git.resolveRef({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, ref });
     logger.debug({ ref, oid }, 'Resolved ref');
     return oid;
-  } catch (error) {
+  } catch (_error) {
     const validRefs = await listRefs(repoRoot).catch(() => []);
     throw createGitError(`Failed to resolve ref "${ref}"`, {
       ref,
       validRefs: validRefs.slice(0, 10),
-      suggestion: validRefs.length > 0 ? `Valid refs include: ${validRefs.slice(0, 5).join(', ')}` : undefined,
+      suggestion:
+        validRefs.length > 0
+          ? `Valid refs include: ${validRefs.slice(0, 5).join(', ')}`
+          : undefined,
     });
   }
 }
@@ -54,7 +57,7 @@ export async function findGitDir(repoRoot: string): Promise<string> {
       // Worktree case: .git is a file pointing to the actual git dir
       const content = await fs.readFile(gitDir, 'utf-8');
       const match = content.match(/gitdir: (.+)/);
-      if (match && match[1]) {
+      if (match?.[1]) {
         const actualGitDir = match[1].trim();
         // Handle relative paths
         return path.isAbsolute(actualGitDir) ? actualGitDir : path.join(repoRoot, actualGitDir);
@@ -90,7 +93,13 @@ async function listRefs(repoRoot: string): Promise<string[]> {
 export async function getLog(
   repoRoot: string,
   options: { ref?: string; depth?: number } = {}
-): Promise<Array<{ oid: string; message: string; author: { name: string; email: string; timestamp: number } }>> {
+): Promise<
+  Array<{
+    oid: string;
+    message: string;
+    author: { name: string; email: string; timestamp: number };
+  }>
+> {
   try {
     const gitDir = await findGitDir(repoRoot);
     const log = await git.log({
@@ -121,7 +130,9 @@ export async function getLog(
  * @param repoRoot - Repository root directory
  * @returns Status matrix entries
  */
-export async function getStatus(repoRoot: string): Promise<Array<[string, number, number, number]>> {
+export async function getStatus(
+  repoRoot: string
+): Promise<Array<[string, number, number, number]>> {
   try {
     const gitDir = await findGitDir(repoRoot);
     const matrix = await git.statusMatrix({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir });
@@ -148,8 +159,18 @@ export async function getDiff(repoRoot: string, base: string, head: string): Pro
     const headOid = await resolveRef(repoRoot, head);
 
     // Get the tree OIDs for both commits
-    const baseCommit = await git.readCommit({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: baseOid });
-    const headCommit = await git.readCommit({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: headOid });
+    const baseCommit = await git.readCommit({
+      fs: fsAdapter,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oid: baseOid,
+    });
+    const headCommit = await git.readCommit({
+      fs: fsAdapter,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oid: headOid,
+    });
 
     const baseTreeOid = baseCommit.commit.tree;
     const headTreeOid = headCommit.commit.tree;
@@ -182,12 +203,22 @@ export async function getDiff(repoRoot: string, base: string, head: string): Pro
         let diff = '';
         if (status !== 'deleted' && headOid) {
           try {
-            const headBlob = await git.readBlob({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: headOid });
+            const headBlob = await git.readBlob({
+              fs: fsAdapter,
+              dir: repoRoot,
+              gitdir: gitDir,
+              oid: headOid,
+            });
             const headContent = Buffer.from(headBlob.blob).toString('utf-8');
             if (status === 'added') {
               diff = generateAddedDiff(filepath, headContent);
             } else if (baseOid) {
-              const baseBlob = await git.readBlob({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: baseOid });
+              const baseBlob = await git.readBlob({
+                fs: fsAdapter,
+                dir: repoRoot,
+                gitdir: gitDir,
+                oid: baseOid,
+              });
               const baseContent = Buffer.from(baseBlob.blob).toString('utf-8');
               diff = generateUnifiedDiff(filepath, baseContent, headContent);
             }
@@ -197,7 +228,12 @@ export async function getDiff(repoRoot: string, base: string, head: string): Pro
           }
         } else if (status === 'deleted' && baseOid) {
           try {
-            const baseBlob = await git.readBlob({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: baseOid });
+            const baseBlob = await git.readBlob({
+              fs: fsAdapter,
+              dir: repoRoot,
+              gitdir: gitDir,
+              oid: baseOid,
+            });
             const baseContent = Buffer.from(baseBlob.blob).toString('utf-8');
             diff = generateDeletedDiff(filepath, baseContent);
           } catch {
@@ -224,7 +260,11 @@ function generateUnifiedDiff(filepath: string, oldContent: string, newContent: s
 
   // Simple diff algorithm - find common prefix and suffix
   let prefixLen = 0;
-  while (prefixLen < oldLines.length && prefixLen < newLines.length && oldLines[prefixLen] === newLines[prefixLen]) {
+  while (
+    prefixLen < oldLines.length &&
+    prefixLen < newLines.length &&
+    oldLines[prefixLen] === newLines[prefixLen]
+  ) {
     prefixLen++;
   }
 
@@ -263,7 +303,11 @@ function generateUnifiedDiff(filepath: string, oldContent: string, newContent: s
   }
 
   // Context lines after changes
-  for (let i = oldLines.length - suffixLen; i < Math.min(oldLines.length, oldLines.length - suffixLen + 3); i++) {
+  for (
+    let i = oldLines.length - suffixLen;
+    i < Math.min(oldLines.length, oldLines.length - suffixLen + 3);
+    i++
+  ) {
     diffLines.push(` ${oldLines[i]}`);
   }
 
@@ -312,14 +356,28 @@ function generateDeletedDiff(filepath: string, content: string): string {
  * @param head - Head ref/commit
  * @returns Array of file changes
  */
-export async function getChangedFiles(repoRoot: string, base: string, head: string): Promise<FileChange[]> {
+export async function getChangedFiles(
+  repoRoot: string,
+  base: string,
+  head: string
+): Promise<FileChange[]> {
   try {
     const gitDir = await findGitDir(repoRoot);
     const baseOid = await resolveRef(repoRoot, base);
     const headOid = await resolveRef(repoRoot, head);
 
-    const baseCommit = await git.readCommit({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: baseOid });
-    const headCommit = await git.readCommit({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: headOid });
+    const baseCommit = await git.readCommit({
+      fs: fsAdapter,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oid: baseOid,
+    });
+    const headCommit = await git.readCommit({
+      fs: fsAdapter,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oid: headOid,
+    });
 
     const baseTreeOid = baseCommit.commit.tree;
     const headTreeOid = headCommit.commit.tree;
@@ -360,16 +418,32 @@ export async function getChangedFiles(repoRoot: string, base: string, head: stri
 
     return changes;
   } catch (error) {
-    throw createGitError('Failed to get changed files', { repoRoot, base, head, error: String(error) });
+    throw createGitError('Failed to get changed files', {
+      repoRoot,
+      base,
+      head,
+      error: String(error),
+    });
   }
 }
 
 /**
  * Reads a blob by filepath at a specific commit.
  */
-async function readBlobAtCommit(repoRoot: string, gitDir: string, commitOid: string, filepath: string): Promise<string | null> {
+async function readBlobAtCommit(
+  repoRoot: string,
+  gitDir: string,
+  commitOid: string,
+  filepath: string
+): Promise<string | null> {
   try {
-    const blob = await git.readBlob({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, oid: commitOid, filepath });
+    const blob = await git.readBlob({
+      fs: fsAdapter,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oid: commitOid,
+      filepath,
+    });
     return Buffer.from(blob.blob).toString('utf-8');
   } catch {
     return null;
@@ -394,12 +468,13 @@ export async function getStagedDiff(repoRoot: string): Promise<string> {
 
     for (const entry of matrix) {
       const filepath = entry[0];
-      const headStatus = entry[1];
-      const workdirStatus = entry[2];
+      const _headStatus = entry[1];
+      const _workdirStatus = entry[2];
       const stageStatus = entry[3] as 0 | 1 | 2 | 3;
       // stageStatus: 0 = unmodified, 1 = modified, 2 = added, 3 = deleted
       if (stageStatus === 1 || stageStatus === 2 || stageStatus === 3) {
-        const status: FileChange['status'] = stageStatus === 2 ? 'added' : stageStatus === 3 ? 'deleted' : 'modified';
+        const status: FileChange['status'] =
+          stageStatus === 2 ? 'added' : stageStatus === 3 ? 'deleted' : 'modified';
 
         let diff = '';
         if (status !== 'deleted') {
@@ -459,13 +534,14 @@ export async function getWorkingDiff(repoRoot: string): Promise<string> {
 
     for (const entry of matrix) {
       const filepath = entry[0];
-      const headStatus = entry[1];
+      const _headStatus = entry[1];
       const workdirStatus = entry[2] as 0 | 1 | 2 | 3;
       const stageStatus = entry[3] as 0 | 1 | 2 | 3;
       // workdirStatus: 0 = unmodified, 1 = modified, 2 = added, 3 = deleted
       // Only include if working tree differs from index
       if (workdirStatus !== 0 && workdirStatus !== stageStatus) {
-        const status: FileChange['status'] = workdirStatus === 2 ? 'added' : workdirStatus === 3 ? 'deleted' : 'modified';
+        const status: FileChange['status'] =
+          workdirStatus === 2 ? 'added' : workdirStatus === 3 ? 'deleted' : 'modified';
 
         let diff = '';
         if (status !== 'deleted') {

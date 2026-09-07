@@ -5,7 +5,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import * as git from 'isomorphic-git';
-import { resolveScope, parseRange, validateRef } from './scope.js';
+import { parseRange, resolveScope, validateRef } from './scope.js';
 
 describe('parseRange', () => {
   it('parses two-dot range', () => {
@@ -76,9 +76,9 @@ describe('resolveScope', () => {
   });
 
   it('throws when no scope specified (commit type without commit)', async () => {
-    await expect(
-      resolveScope({ type: 'commit', repoRoot: testDir })
-    ).rejects.toThrow('--commit requires a ref argument');
+    await expect(resolveScope({ type: 'commit', repoRoot: testDir })).rejects.toThrow(
+      '--commit requires a ref argument'
+    );
   });
 
   describe('--staged', () => {
@@ -131,9 +131,9 @@ describe('resolveScope', () => {
     });
 
     it('throws when commit ref not provided', async () => {
-      await expect(
-        resolveScope({ type: 'commit', repoRoot: testDir })
-      ).rejects.toThrow('--commit requires a ref argument');
+      await expect(resolveScope({ type: 'commit', repoRoot: testDir })).rejects.toThrow(
+        '--commit requires a ref argument'
+      );
     });
   });
 
@@ -184,9 +184,9 @@ describe('resolveScope', () => {
     });
 
     it('throws when branch not provided', async () => {
-      await expect(
-        resolveScope({ type: 'branch', repoRoot: testDir })
-      ).rejects.toThrow('--branch requires a branch name');
+      await expect(resolveScope({ type: 'branch', repoRoot: testDir })).rejects.toThrow(
+        '--branch requires a branch name'
+      );
     });
   });
 });
