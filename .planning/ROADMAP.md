@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Foundation & Repository Layer** — Repository discovery, Git diff, config, cache, model abstraction
+- [x] **Phase 1: Foundation & Repository Layer** — Repository discovery, Git diff, config, cache, model abstraction
 - [ ] **Phase 2: Analysis Layer** — Tree-sitter parsing, symbol extraction, static analysis, diagnostics
 - [ ] **Phase 3: Intelligence Layer** — Symbol index, reference/dependency graphs, Context Engine with token budgeting
 - [ ] **Phase 4: Model Provider** — NVIDIA adapter, versioned prompts, schema validation, prompt injection protection
@@ -38,7 +38,7 @@
 **UI hint**: no
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffold, core types, error hierarchy, logging
+- [x] 01-01-PLAN.md — Project scaffold, core types, error hierarchy, logging
 - [ ] 01-02-PLAN.md — Configuration system: Zod schema, loader, precedence, init command
 - [ ] 01-03-PLAN.md — Repository discovery, Git diff, ReviewScope, monorepo detection
 - [ ] 01-04-PLAN.md — Ignore handling, file filtering, binary/generated detection
@@ -147,7 +147,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Repository Layer | 0/7 | Planned | - |
+| 1. Foundation & Repository Layer | 1/7 | Executing | 2025-09-07 |
 | 2. Analysis Layer | 0/0 | Not started | - |
 | 3. Intelligence Layer | 0/0 | Not started | - |
 | 4. Model Provider | 0/0 | Not started | - |

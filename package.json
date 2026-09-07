@@ -9,8 +9,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/cli.ts",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "lint": "biome check .",
     "format": "biome format --write .",
     "check": "biome check --apply .",

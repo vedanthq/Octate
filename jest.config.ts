@@ -1,7 +1,7 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.test.ts'],
@@ -15,15 +15,21 @@ const config: Config = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
-      useESM: false,
+      useESM: true,
     }],
   },
-  extensionsToTreatAsEsm: [],
+  extensionsToTreatAsEsm: ['.ts'],
   globals: {
     'ts-jest': {
-      useESM: false,
+      useESM: true,
     },
   },
+  // Enable ESM support in Jest - experimental VM modules
+  testEnvironmentOptions: {
+    vmModules: true,
+  },
+  // Ensure we're using the right module system
+  moduleFileExtensions: ['ts', 'js', 'json'],
 };
 
 export default config;
