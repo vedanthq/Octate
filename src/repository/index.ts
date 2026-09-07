@@ -11,13 +11,16 @@ export {
 } from './discovery.js';
 export {
   createFileFilter,
-  type FileAnalysisResult,
-  type FileFilter,
-  type FileFilterOptions,
+  FileFilter,
+  type FileFilterConfig,
+  type FileFilterConfig as FileFilterOptions,
+  type FileFilterResult,
+  type FileFilterResult as FileAnalysisResult,
   isBinaryFile,
+  isBinaryFileFast,
   isGeneratedFile,
-  isSymlinkSafe,
-  shouldAnalyzeFile,
+  isSymlink,
+  resolveSymlinkSafely,
 } from './filter.js';
 export {
   getChangedFiles,
