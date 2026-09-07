@@ -34,8 +34,17 @@
   4. Configuration precedence works: CLI args > env vars > project `octate.yaml` > global config > built-in defaults
   5. Local cache at `~/.local/share/octate/` stores indexes with project-namespaced identity using content-hash/file-path/parser-version/language/config-version keys
   6. Ctrl+C gracefully cancels any running operation without orphaned processes (model requests, subprocesses, indexing, background tasks)
-**Plans**: TBD
+**Plans**: 7 plans
 **UI hint**: no
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold, core types, error hierarchy, logging
+- [ ] 01-02-PLAN.md — Configuration system: Zod schema, loader, precedence, init command
+- [ ] 01-03-PLAN.md — Repository discovery, Git diff, ReviewScope, monorepo detection
+- [ ] 01-04-PLAN.md — Ignore handling, file filtering, binary/generated detection
+- [ ] 01-05-PLAN.md — Cache infrastructure: project identity, keys, store, LRU, promise pool
+- [ ] 01-06-PLAN.md — Cancellation (AbortController), Model abstraction interface
+- [ ] 01-07-PLAN.md — CLI commands: review, init, doctor with exit codes
 
 ### Phase 2: Analysis Layer
 **Goal**: Changed files are parsed for symbols and deterministic diagnostics are collected for AI consumption.
@@ -138,7 +147,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Repository Layer | 0/0 | Not started | - |
+| 1. Foundation & Repository Layer | 0/7 | Planned | - |
 | 2. Analysis Layer | 0/0 | Not started | - |
 | 3. Intelligence Layer | 0/0 | Not started | - |
 | 4. Model Provider | 0/0 | Not started | - |
