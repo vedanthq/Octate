@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Model (MODEL)
 
 - [ ] **MODEL-01**: NVIDIA Nemotron 3 Ultra 550B-A55B provider with API auth, HTTP, request/response serialization, timeout, retry, rate-limit handling, structured errors, cancellation, usage metadata
-- [ ] **MODEL-02**: Model abstraction interface (`ReviewModel.generate(request): Promise<ModelResponse>`) — core depends on abstraction, not NVIDIA specifics
+- [x] **MODEL-02**: Model abstraction interface (`ReviewModel.generate(request): Promise<ModelResponse>`) — core depends on abstraction, not NVIDIA specifics
 - [ ] **MODEL-03**: Schema-validated structured output (findings with severity, category, title, message, file, line ranges, confidence, evidence, suggested fix) — validate schema, file paths, line ranges, severity, confidence, evidence, categories
 - [ ] **MODEL-04**: Prompt injection protection — trusted (system policy, Octate rules, review task) vs untrusted (source, comments, README, commit messages, repo config, generated files) separation in prompt architecture
 
@@ -65,7 +65,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **CACHE-01**: Local cache at `~/.local/share/octate/` with indexes, cache, findings, logs — project identity namespaced, incremental indexing via content hash/file path/parser version/language/config version
 - [ ] **CACHE-02**: Bounded concurrency with promise pool/task queue — parallelize parsing, diagnostics, reviewers
-- [ ] **CACHE-03**: Graceful cancellation (Ctrl+C) stopping model requests, analysis subprocesses, indexing, background tasks — no orphaned processes
+- [x] **CACHE-03**: Graceful cancellation (Ctrl+C) stopping model requests, analysis subprocesses, indexing, background tasks — no orphaned processes
 
 ## v2 Requirements
 
@@ -149,7 +149,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REV-03 | Phase 5 | Pending |
 | REV-04 | Phase 5 | Pending |
 | MODEL-01 | Phase 4 | Pending |
-| MODEL-02 | Phase 1 | Pending |
+| MODEL-02 | Phase 1 | Complete |
 | MODEL-03 | Phase 4 | Pending |
 | MODEL-04 | Phase 4 | Pending |
 | TUI-01 | Phase 7 | Pending |
@@ -161,7 +161,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONF-02 | Phase 1 | Complete |
 | CACHE-01 | Phase 1 | Pending |
 | CACHE-02 | Phase 1 | Pending |
-| CACHE-03 | Phase 1 | Pending |
+| CACHE-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
