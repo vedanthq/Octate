@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
+    "@jest/globals": "^30.5.1",
     "@types/jest": "latest",
     "@types/node": "26.4.1",
     "@types/react": "latest",
