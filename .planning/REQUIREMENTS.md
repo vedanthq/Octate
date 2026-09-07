@@ -138,25 +138,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPO-04 | Phase 1 | Pending |
 | PARSE-01 | Phase 2 | Pending |
 | PARSE-02 | Phase 2 | Pending |
-| PARSE-03 | Phase 2 | Pending |
-| PARSE-04 | Phase 2 | Pending |
+| PARSE-03 | Phase 3 | Pending |
+| PARSE-04 | Phase 3 | Pending |
 | ANAL-01 | Phase 2 | Pending |
 | ANAL-02 | Phase 2 | Pending |
 | CTX-01 | Phase 3 | Pending |
 | CTX-02 | Phase 3 | Pending |
-| REV-01 | Phase 4 | Pending |
-| REV-02 | Phase 4 | Pending |
-| REV-03 | Phase 4 | Pending |
-| REV-04 | Phase 4 | Pending |
+| REV-01 | Phase 5 | Pending |
+| REV-02 | Phase 5 | Pending |
+| REV-03 | Phase 5 | Pending |
+| REV-04 | Phase 5 | Pending |
 | MODEL-01 | Phase 4 | Pending |
 | MODEL-02 | Phase 1 | Pending |
 | MODEL-03 | Phase 4 | Pending |
 | MODEL-04 | Phase 4 | Pending |
-| TUI-01 | Phase 5 | Pending |
-| TUI-02 | Phase 5 | Pending |
-| TUI-03 | Phase 5 | Pending |
-| OUT-01 | Phase 5 | Pending |
-| OUT-02 | Phase 5 | Pending |
+| TUI-01 | Phase 7 | Pending |
+| TUI-02 | Phase 7 | Pending |
+| TUI-03 | Phase 7 | Pending |
+| OUT-01 | Phase 7 | Pending |
+| OUT-02 | Phase 6 | Pending |
 | CONF-01 | Phase 1 | Pending |
 | CONF-02 | Phase 1 | Pending |
 | CACHE-01 | Phase 1 | Pending |
@@ -164,10 +164,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CACHE-03 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 28 total
-- Mapped to phases: 28
+- v1 requirements: 30 total
+- Mapped to phases: 30
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2025-09-07*
-*Last updated: 2025-09-07 after initial definition*
+*Last updated: 2025-09-07 after roadmap creation*
