@@ -1,0 +1,44 @@
+{
+  "name": "octate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/cli.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "biome check --apply .",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "isomorphic-git": "1.41.9",
+    "yaml": "2.9.0",
+    "zod": "4.5.4",
+    "pino": "10.3.1",
+    "p-limit": "7.3.2",
+    "p-queue": "7.3.2",
+    "fast-glob": "3.3.3",
+    "ignore": "7.0.8",
+    "picocolors": "1.1.1",
+    "@microsoft/sarif": "latest",
+    "node-sarif-builder": "5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "tsx": "latest",
+    "@types/node": "26.4.1",
+    "@types/react": "latest",
+    "@types/jest": "latest",
+    "jest": "30.5.1",
+    "ts-jest": "29.4.12",
+    "@biomejs/biome": "2.5.12",
+    "husky": "latest"
+  }
+}
