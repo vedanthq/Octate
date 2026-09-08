@@ -1,21 +1,17 @@
 /**
  * AbortController management and propagation.
- * Single AbortController at ReviewUseCase level propagates to all layers (D-18).
+ * Single AbortController at ReviewUseCase level propagates to all layers.
  */
 
-import { createLogger } from '../logging/index.js';
-
-const logger = createLogger('cancellation:controller');
+import type { AbortSignalLike } from '../model/types.js';
 
 /**
- * CancellationController manages AbortController lifecycle and propagates
- * cancellation signals to child operations.
+ * Cancellation controller that manages AbortController lifecycle
+ * and provides utilities for cancellation-aware operations.
  */
 export class CancellationController {
   private abortController: AbortController;
-  private childControllers: Set<AbortController> = new Set();
-  private aborted: boolean = false;
-  private abortReason?: Error;
+  private childSignals: AbortSignal[] = [];
 
   constructor() {
     this.abortController = new AbortController();
@@ -23,7 +19,6 @@ export class CancellationController {
 
   /**
    * Gets the AbortSignal for this controller.
-   * This signal should be passed to all cancellable operations.
    */
   get signal(): AbortSignal {
     return this.abortController.signal;
@@ -32,186 +27,145 @@ export class CancellationController {
   /**
    * Checks if cancellation has been requested.
    */
-  get isAborted(): boolean {
-    return this.aborted;
+  get aborted(): boolean {
+    return this.abortController.signal.aborted;
   }
 
   /**
-   * Gets the abort reason if cancelled.
+   * Creates a child AbortSignal that aborts when this controller aborts.
+   * Useful for passing to sub-operations.
    */
-  get reason(): Error | undefined {
-    return this.abortReason;
-  }
+  createChildSignal(): AbortSignal {
+    const childController = new AbortController();
 
-  /**
-   * Creates a child AbortController that will be aborted when this controller aborts.
-   * Useful for creating scoped cancellation for sub-operations.
-   */
-  createChildController(): AbortController {
-    const child = new AbortController();
-    this.childControllers.add(child);
-
-    // If parent is already aborted, abort child immediately
-    if (this.aborted) {
-      child.abort(this.abortReason);
+    // When parent aborts, abort the child
+    if (this.abortController.signal.aborted) {
+      childController.abort(this.abortController.signal.reason);
     } else {
-      // Listen for parent abort
-      this.abortController.signal.addEventListener(
-        'abort',
-        () => {
-          child.abort(this.abortReason);
-        },
-        { once: true }
-      );
+      this.abortController.signal.addEventListener('abort', () => {
+        childController.abort(this.abortController.signal.reason);
+      });
     }
 
-    // Clean up reference when child aborts
-    child.signal.addEventListener(
-      'abort',
-      () => {
-        this.childControllers.delete(child);
-      },
-      { once: true }
-    );
-
-    return child;
+    this.childSignals.push(childController.signal);
+    return childController.signal;
   }
 
   /**
-   * Registers an external AbortController as a child.
-   * The external controller will be aborted when this controller aborts.
+   * Aborts the controller and all child signals.
    */
-  registerChildController(child: AbortController): void {
-    this.childControllers.add(child);
-
-    if (this.aborted) {
-      child.abort(this.abortReason);
-    } else {
-      this.abortController.signal.addEventListener(
-        'abort',
-        () => {
-          child.abort(this.abortReason);
-        },
-        { once: true }
-      );
+  abort(reason?: unknown): void {
+    this.abortController.abort(reason);
+    for (const childSignal of this.childSignals) {
+      // The child signals are aborted automatically via event listener
     }
-
-    child.signal.addEventListener(
-      'abort',
-      () => {
-        this.childControllers.delete(child);
-      },
-      { once: true }
-    );
   }
 
   /**
-   * Requests cancellation of this controller and all child controllers.
-   */
-  abort(reason?: Error): void {
-    if (this.aborted) return;
-
-    this.aborted = true;
-    this.abortReason = reason ?? new Error('Cancellation requested');
-    this.abortController.abort(this.abortReason);
-
-    // Abort all registered child controllers
-    for (const child of this.childControllers) {
-      child.abort(this.abortReason);
-    }
-    this.childControllers.clear();
-
-    logger.info({ reason: this.abortReason?.message }, 'Cancellation requested');
-  }
-
-  /**
-   * Throws if cancellation has been requested.
-   * Useful for checking cancellation at await points.
+   * Throws if the signal has been aborted.
    */
   throwIfAborted(): void {
-    if (this.aborted) {
-      throw this.abortReason ?? new Error('Operation cancelled');
+    if (this.abortController.signal.aborted) {
+      throw this.abortController.signal.reason ?? new DOMException('Aborted', 'AbortError');
     }
   }
 
   /**
-   * Adds an event listener for the abort event.
+   * Adds an abort event listener.
    */
-  addEventListener(
-    type: 'abort',
-    listener: (this: AbortSignal, ev: Event) => void,
-    options?: AddEventListenerOptions
-  ): void {
-    this.abortController.signal.addEventListener(type, listener, options);
+  addEventListener(type: 'abort', listener: (event: Event) => void): void {
+    this.abortController.signal.addEventListener(type, listener);
   }
 
   /**
-   * Removes an event listener for the abort event.
+   * Removes an abort event listener.
    */
-  removeEventListener(
-    type: 'abort',
-    listener: (this: AbortSignal, ev: Event) => void,
-    options?: EventListenerOptions
-  ): void {
-    this.abortController.signal.removeEventListener(type, listener, options);
+  removeEventListener(type: 'abort', listener: (event: Event) => void): void {
+    this.abortController.signal.removeEventListener(type, listener);
   }
 }
 
 /**
- * Creates a CancellationController and sets up process signal handlers.
- * Call this at the entry point of a review operation.
+ * Creates a new CancellationController with optional parent signal.
+ * If parentSignal is provided, the controller will abort when the parent aborts.
  */
-export function createCancellationController(): CancellationController {
+export function createCancellationController(parentSignal?: AbortSignal): CancellationController {
   const controller = new CancellationController();
 
-  // Handle SIGINT (Ctrl+C)
-  const handleSigint = () => {
-    logger.info('Received SIGINT, aborting...');
-    controller.abort(new Error('Interrupted by user (SIGINT)'));
-  };
-
-  // Handle SIGTERM
-  const handleSigterm = () => {
-    logger.info('Received SIGTERM, aborting...');
-    controller.abort(new Error('Terminated (SIGTERM)'));
-  };
-
-  process.on('SIGINT', handleSigint);
-  process.on('SIGTERM', handleSigterm);
-
-  // Store cleanup function on controller for later removal
-  (controller as any)._cleanup = () => {
-    process.off('SIGINT', handleSigint);
-    process.off('SIGTERM', handleSigterm);
-  };
+  if (parentSignal) {
+    if (parentSignal.aborted) {
+      controller.abort(parentSignal.reason);
+    } else {
+      parentSignal.addEventListener('abort', () => {
+        controller.abort(parentSignal.reason);
+      });
+    }
+  }
 
   return controller;
 }
 
 /**
  * Wraps an async operation with cancellation support.
- * Checks the signal before and after the operation.
+ * The operation receives an AbortSignal and should check it periodically.
+ * Races the operation against the abort signal.
  */
 export async function withCancellation<T>(
-  controller: CancellationController,
-  operation: (signal: AbortSignal) => Promise<T>
+  operation: (signal: AbortSignal) => Promise<T>,
+  signal?: AbortSignal
 ): Promise<T> {
-  controller.throwIfAborted();
-
-  // Create a promise that rejects when aborted
-  const abortPromise = new Promise<never>((_, reject) => {
-    const handler = () => reject(controller.reason ?? new Error('Operation cancelled'));
-    controller.signal.addEventListener('abort', handler, { once: true });
-
-    // Clean up listener when operation completes
-    const _cleanup = () => controller.signal.removeEventListener('abort', handler);
-    // We can't easily clean up here since we don't know when operation completes
-    // The listener has { once: true } so it self-removes on first abort
-  });
+  const controller = createCancellationController(signal);
 
   try {
-    return await Promise.race([operation(controller.signal), abortPromise]);
+    // Race the operation against the abort signal
+    const operationPromise = operation(controller.signal);
+    const abortPromise = abortSignalPromise(controller.signal);
+
+    const racePromise = Promise.race([operationPromise, abortPromise]);
+    const result = await racePromise;
+    return result;
   } finally {
-    controller.throwIfAborted();
+    // Clean up child signals
+    controller.abort();
   }
+}
+
+/**
+ * Creates a promise that rejects when the signal aborts.
+ * Useful for racing against cancellation.
+ */
+export function abortSignalPromise(signal: AbortSignal): Promise<never> {
+  return new Promise((_, reject) => {
+    if (signal.aborted) {
+      const reason =
+        signal.reason instanceof Error
+          ? signal.reason
+          : new Error(String(signal.reason ?? 'Aborted'));
+      reject(reason);
+      return;
+    }
+
+    const handler = () => {
+      const reason =
+        signal.reason instanceof Error
+          ? signal.reason
+          : new Error(String(signal.reason ?? 'Aborted'));
+      reject(reason);
+    };
+
+    signal.addEventListener('abort', handler, { once: true });
+  });
+}
+
+/**
+ * Checks if a signal is an AbortSignal-like object.
+ */
+export function isAbortSignal(signal: unknown): signal is AbortSignal {
+  return (
+    typeof signal === 'object' &&
+    signal !== null &&
+    'aborted' in signal &&
+    'addEventListener' in signal &&
+    'removeEventListener' in signal
+  );
 }

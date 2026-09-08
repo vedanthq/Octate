@@ -1,261 +1,142 @@
 /**
- * Tests for model/types.ts and model/abstraction.ts
+ * Tests for model types and abstraction.
  */
 
 import { describe, expect, it } from '@jest/globals';
-import { z } from 'zod';
-import {
-  isReviewModel,
-  type ModelRequest,
-  type ModelResponse,
-  ModelResponseFindingsSchema,
-  ModelResponseSchema,
-  type ModelUsage,
-  type ReviewModel,
-} from './index.js';
+import { createModelProvider, isReviewModel, ReviewModel } from './abstraction.js';
+import type { ModelFinding, ModelRequest, ModelResponse, ProviderType } from './types.js';
 
-describe('model:types', () => {
-  describe('ModelUsage', () => {
-    it('defines correct structure', () => {
-      const usage: ModelUsage = {
-        promptTokens: 100,
-        completionTokens: 50,
-        totalTokens: 150,
-      };
+describe('ReviewModel interface', () => {
+  it('throws when generate is called on base interface', async () => {
+    const mockRequest: ModelRequest = {
+      systemPolicy: 'test',
+      reviewTask: 'test',
+      projectRules: [],
+      repoMetadata: {
+        root: '/test',
+        languages: { typescript: 100 },
+        fileCount: 1,
+        totalLines: 100,
+      },
+      diff: '',
+      context: [],
+      diagnostics: [],
+      outputSchema: '{}',
+    };
 
-      expect(usage.promptTokens).toBe(100);
-      expect(usage.completionTokens).toBe(50);
-      expect(usage.totalTokens).toBe(150);
-    });
-  });
-
-  describe('ModelRequest', () => {
-    it('defines correct structure with all required fields', () => {
-      const request: ModelRequest = {
-        systemPolicy: 'You are a code reviewer',
-        reviewTask: 'Review this PR for security issues',
-        projectRules: ['No hardcoded secrets', 'Use type safety'],
-        repoMetadata: { languages: ['typescript'], size: 10000 },
-        diff: '--- a/file.ts\n+++ b/file.ts\n@@ -1 +1 @@\n-const x = 1;\n+const x = 2;',
-        context: [{ source: 'file.ts', content: 'const x = 1;', relevance: 0.9 }],
-        diagnostics: [
-          { file: 'file.ts', line: 1, message: 'Unused variable', severity: 'warning' },
-        ],
-        outputSchema: z.object({ findings: z.array(z.object({})) }),
-      };
-
-      expect(request.systemPolicy).toBe('You are a code reviewer');
-      expect(request.reviewTask).toBe('Review this PR for security issues');
-      expect(request.projectRules).toHaveLength(2);
-      expect(request.repoMetadata.languages).toContain('typescript');
-      expect(request.diff).toContain('const x = 2');
-      expect(request.context).toHaveLength(1);
-      expect(request.diagnostics).toHaveLength(1);
-      expect(request.outputSchema).toBeInstanceOf(z.ZodObject);
-    });
-  });
-
-  describe('ModelResponse', () => {
-    it('defines correct structure with all required fields', () => {
-      const response: ModelResponse = {
-        findings: [
-          {
-            type: 'security',
-            severity: 'high',
-            file: 'src/auth.ts',
-            line: 42,
-            endLine: 45,
-            message: 'Hardcoded API key detected',
-            suggestion: 'Use environment variable',
-            confidence: 0.95,
-            evidence: ['src/auth.ts:42'],
-          },
-        ],
-        usage: {
-          promptTokens: 500,
-          completionTokens: 200,
-          totalTokens: 700,
-        },
-        model: 'nvidia/nemotron-3-ultra',
-        latencyMs: 1500,
-        rawResponse: '{"findings":[...]}',
-        finishReason: 'stop',
-      };
-
-      expect(response.findings).toHaveLength(1);
-      expect(response.findings[0]?.severity).toBe('high');
-      expect(response.usage.totalTokens).toBe(700);
-      expect(response.model).toBe('nvidia/nemotron-3-ultra');
-      expect(response.latencyMs).toBe(1500);
-      expect(response.finishReason).toBe('stop');
-    });
-
-    it('allows optional fields', () => {
-      const response: ModelResponse = {
-        findings: [],
-        usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
-        model: 'test-model',
-        latencyMs: 100,
-        finishReason: 'stop',
-      };
-
-      expect(response.rawResponse).toBeUndefined();
-      expect(response.findings).toHaveLength(0);
-    });
-  });
-
-  describe('ModelResponseFindingsSchema', () => {
-    it('validates correct finding', () => {
-      const finding = {
-        type: 'security',
-        severity: 'high' as const,
-        file: 'src/test.ts',
-        line: 10,
-        message: 'Test finding',
-        confidence: 0.9,
-      };
-
-      const result = ModelResponseFindingsSchema.safeParse([finding]);
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects invalid severity', () => {
-      const finding = {
-        type: 'security',
-        severity: 'invalid' as any,
-        file: 'src/test.ts',
-        line: 10,
-        message: 'Test finding',
-        confidence: 0.9,
-      };
-
-      const result = ModelResponseFindingsSchema.safeParse([finding]);
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects confidence out of range', () => {
-      const finding = {
-        type: 'security',
-        severity: 'high' as const,
-        file: 'src/test.ts',
-        line: 10,
-        message: 'Test finding',
-        confidence: 1.5,
-      };
-
-      const result = ModelResponseFindingsSchema.safeParse([finding]);
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('ModelResponseSchema', () => {
-    it('validates complete response', () => {
-      const response = {
-        findings: [
-          {
-            type: 'security',
-            severity: 'high' as const,
-            file: 'src/test.ts',
-            line: 10,
-            message: 'Test finding',
-            confidence: 0.9,
-          },
-        ],
-        usage: {
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-        },
-        model: 'test-model',
-        latencyMs: 100,
-        finishReason: 'stop' as const,
-      };
-
-      const result = ModelResponseSchema.safeParse(response);
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects invalid finishReason', () => {
-      const response = {
-        findings: [],
-        usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
-        model: 'test-model',
-        latencyMs: 100,
-        finishReason: 'invalid' as any,
-      };
-
-      const result = ModelResponseSchema.safeParse(response);
-      expect(result.success).toBe(false);
-    });
+    await expect(ReviewModel.generate(mockRequest)).rejects.toThrow(
+      'must be implemented by provider'
+    );
   });
 });
 
-describe('model:abstraction', () => {
-  describe('ReviewModel interface', () => {
-    it('defines required methods and properties', () => {
-      // Just verify the interface structure exists
-      const model: ReviewModel = {
-        modelId: 'test-model',
-        maxContextTokens: 8192,
-        async generate() {
-          return {
-            findings: [],
-            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-            model: 'test-model',
-            latencyMs: 0,
-            finishReason: 'stop',
-          };
-        },
-      };
-
-      expect(model.modelId).toBe('test-model');
-      expect(model.maxContextTokens).toBe(8192);
-      expect(typeof model.generate).toBe('function');
-    });
-  });
-
-  describe('isReviewModel', () => {
-    it('returns true for valid ReviewModel', () => {
-      const model = {
-        modelId: 'test',
-        maxContextTokens: 8192,
-        generate: async () => ({
+describe('isReviewModel', () => {
+  it('returns true for valid implementation', () => {
+    const validImpl = {
+      async generate(_request: ModelRequest): Promise<ModelResponse> {
+        return {
           findings: [],
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           model: 'test',
           latencyMs: 0,
-          finishReason: 'stop' as const,
-        }),
-      };
+          finishReason: 'stop',
+        };
+      },
+    };
 
-      expect(isReviewModel(model)).toBe(true);
-    });
+    expect(isReviewModel(validImpl)).toBe(true);
+  });
 
-    it('returns false for missing generate', () => {
-      const model = {
-        modelId: 'test',
-        maxContextTokens: 8192,
-      };
+  it('returns false for invalid implementation', () => {
+    expect(isReviewModel(null)).toBe(false);
+    expect(isReviewModel({})).toBe(false);
+    expect(isReviewModel({ generate: 'not a function' })).toBe(false);
+  });
+});
 
-      expect(isReviewModel(model)).toBe(false);
-    });
+describe('createModelProvider', () => {
+  it('throws for local-nvidia (not implemented)', () => {
+    expect(() => {
+      createModelProvider('local-nvidia' as ProviderType, { model: 'test' });
+    }).toThrow('not yet implemented');
+  });
 
-    it('returns false for non-function generate', () => {
-      const model = {
-        modelId: 'test',
-        maxContextTokens: 8192,
-        generate: 'not a function',
-      };
+  it('throws for hosted (not implemented)', () => {
+    expect(() => {
+      createModelProvider('hosted' as ProviderType, { model: 'test' });
+    }).toThrow('not yet implemented');
+  });
+});
 
-      expect(isReviewModel(model)).toBe(false);
-    });
+describe('ModelRequest type', () => {
+  it('has all required trusted fields', () => {
+    const request: ModelRequest = {
+      systemPolicy: 'You are a code reviewer',
+      reviewTask: 'Review this diff',
+      projectRules: ['Rule 1', 'Rule 2'],
+      repoMetadata: {
+        root: '/repo',
+        languages: { typescript: 1000 },
+        fileCount: 50,
+        totalLines: 5000,
+      },
+      diff: 'diff content',
+      context: [],
+      diagnostics: [],
+      outputSchema: 'schema',
+    };
 
-    it('returns false for null', () => {
-      expect(isReviewModel(null)).toBe(false);
-    });
+    expect(request.systemPolicy).toBeDefined();
+    expect(request.reviewTask).toBeDefined();
+    expect(request.projectRules).toBeDefined();
+    expect(request.repoMetadata).toBeDefined();
+    expect(request.diff).toBeDefined();
+    expect(request.context).toBeDefined();
+    expect(request.diagnostics).toBeDefined();
+    expect(request.outputSchema).toBeDefined();
+  });
+});
 
-    it('returns false for primitive', () => {
-      expect(isReviewModel('string')).toBe(false);
-    });
+describe('ModelResponse type', () => {
+  it('has all required fields', () => {
+    const response: ModelResponse = {
+      findings: [],
+      usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+      model: 'nvidia/nemotron-3-ultra-550b-a55b',
+      latencyMs: 1500,
+      finishReason: 'stop',
+    };
+
+    expect(response.findings).toBeDefined();
+    expect(response.usage).toBeDefined();
+    expect(response.model).toBeDefined();
+    expect(response.latencyMs).toBeDefined();
+    expect(response.finishReason).toBeDefined();
+  });
+});
+
+describe('ModelFinding type', () => {
+  it('has all required fields', () => {
+    const finding: ModelFinding = {
+      severity: 'high',
+      category: 'security',
+      title: 'Test finding',
+      message: 'Description',
+      file: 'src/test.ts',
+      startLine: 10,
+      endLine: 20,
+      confidence: 0.95,
+      evidence: [],
+      relatedFiles: [],
+      relatedSymbols: [],
+      impact: 'High impact',
+      suggestedFix: 'Fix it',
+      reviewer: 'security',
+    };
+
+    expect(finding.severity).toBe('high');
+    expect(finding.category).toBe('security');
+    expect(finding.confidence).toBeGreaterThanOrEqual(0);
+    expect(finding.confidence).toBeLessThanOrEqual(1);
   });
 });

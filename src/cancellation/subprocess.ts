@@ -1,230 +1,230 @@
 /**
  * Subprocess spawning with AbortSignal support.
- * Subprocesses (tsc, ruff, pytest, bandit) spawned with signal option auto-kill on abort (D-19).
+ * Uses Node 18+ spawn with signal option for automatic cleanup on abort.
  */
 
-import { type SpawnOptions, spawn } from 'node:child_process';
-import { createLogger } from '../logging/index.js';
-
-const logger = createLogger('cancellation:subprocess');
+import { type ChildProcess, type SpawnOptions, spawn } from 'node:child_process';
+import type { AbortSignal } from 'node:events';
 
 /**
- * Error thrown when a subprocess fails.
+ * Error thrown when a subprocess fails or is killed.
  */
 export class SubprocessError extends Error {
-  readonly code: string;
-  readonly signal: NodeJS.Signals | null;
-  readonly exitCode: number | null;
-  readonly command: string;
-  readonly args: string[];
+  readonly code: string | undefined;
+  readonly signal: string | undefined;
+  readonly stdout: string;
+  readonly stderr: string;
 
   constructor(
     message: string,
-    options: {
-      code: string;
-      signal: NodeJS.Signals | null;
-      exitCode: number | null;
-      command: string;
-      args: string[];
-    }
+    options: { code?: string; signal?: string; stdout?: string; stderr?: string } = {}
   ) {
     super(message);
     this.name = 'SubprocessError';
     this.code = options.code;
     this.signal = options.signal;
-    this.exitCode = options.exitCode;
-    this.command = options.command;
-    this.args = options.args;
+    this.stdout = options.stdout ?? '';
+    this.stderr = options.stderr ?? '';
   }
 }
 
 /**
- * Options for spawnWithSignal.
+ * Extended spawn options with signal support.
  */
-export interface SpawnWithSignalOptions extends Omit<SpawnOptions, 'signal'> {
+export interface SpawnWithSignalOptions extends SpawnOptions {
   /** AbortSignal to cancel the subprocess */
   signal?: AbortSignal;
-  /** Timeout in milliseconds (optional) */
+  /** Maximum time in ms before killing the process */
   timeout?: number;
-  /** Whether to kill the process tree on abort (default: true) */
-  killTree?: boolean;
+  /** Whether to collect stdout/stderr */
+  captureOutput?: boolean;
 }
 
 /**
- * Result of a spawned subprocess.
+ * Result of a spawned process.
  */
-export interface SubprocessResult {
-  /** Exit code (null if killed by signal) */
-  exitCode: number | null;
-  /** Signal that killed the process (null if exited normally) */
-  signal: NodeJS.Signals | null;
-  /** Stdout as string */
+export interface SpawnResult {
   stdout: string;
-  /** Stderr as string */
   stderr: string;
+  exitCode: number | null;
+  signal: string | null;
 }
 
 /**
  * Spawns a subprocess with AbortSignal support.
- * The subprocess will be terminated when the signal is aborted.
+ * The process is automatically killed when the signal aborts.
  */
 export function spawnWithSignal(
   command: string,
   args: string[],
   options: SpawnWithSignalOptions = {}
-): Promise<SubprocessResult> {
-  const { signal, timeout, killTree = true, ...spawnOptions } = options;
-
-  // Check if already aborted before spawning
-  if (signal?.aborted) {
-    return Promise.reject(
-      new SubprocessError('Aborted before spawn', {
-        code: 'ABORTED',
-        signal: 'SIGABRT',
-        exitCode: null,
-        command,
-        args,
-      })
-    );
-  }
+): Promise<SpawnResult> {
+  const { signal, timeout, captureOutput = true, ...spawnOptions } = options;
 
   return new Promise((resolve, reject) => {
-    // Spawn in a new process group if killTree is true
-    // This allows us to kill the entire tree without affecting the parent
-    // Note: We don't pass signal to spawn; we handle abort manually for better control
-    const child = spawn(command, args, {
-      ...spawnOptions,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      detached: killTree, // Create new process group for tree killing
-    });
-
-    // If detached, unref so parent can exit independently
-    if (killTree && child.pid) {
-      child.unref();
-    }
-
     let stdout = '';
     let stderr = '';
-    let timeoutId: NodeJS.Timeout | null = null;
-    let resolved = false;
 
-    const cleanup = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      child.removeAllListeners();
-      if (signal) {
-        signal.removeEventListener('abort', abortHandler);
-      }
-    };
-
-    const rejectOnce = (error: Error) => {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        reject(error);
-      }
-    };
-
-    const resolveOnce = (result: SubprocessResult) => {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        resolve(result);
-      }
-    };
-
-    // Handle stdout
-    child.stdout?.on('data', (data) => {
-      stdout += data.toString();
+    const child = spawn(command, args, {
+      ...spawnOptions,
+      signal,
+      stdio: captureOutput ? ['ignore', 'pipe', 'pipe'] : 'inherit',
     });
 
-    // Handle stderr
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
-    });
+    if (captureOutput && child.stdout) {
+      child.stdout.on('data', (data: Buffer) => {
+        stdout += data.toString();
+      });
+    }
 
-    // Handle timeout
-    if (timeout && timeout > 0) {
-      timeoutId = setTimeout(() => {
-        logger.warn({ command, args, timeout }, 'Subprocess timed out, killing...');
-        killProcessTree(child.pid!);
-        rejectOnce(
-          new SubprocessError(`Subprocess timed out after ${timeout}ms`, {
-            code: 'TIMEOUT',
-            signal: 'SIGKILL',
-            exitCode: null,
-            command,
-            args,
-          })
-        );
+    if (captureOutput && child.stderr) {
+      child.stderr.on('data', (data: Buffer) => {
+        stderr += data.toString();
+      });
+    }
+
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+
+    if (timeout) {
+      timeoutHandle = setTimeout(() => {
+        child.kill('SIGTERM');
+        setTimeout(() => {
+          if (!child.killed) {
+            child.kill('SIGKILL');
+          }
+        }, 5000);
       }, timeout);
     }
 
-    // Handle abort signal
-    const abortHandler = () => {
-      logger.debug({ command, args, pid: child.pid }, 'Abort signal received, killing subprocess');
-      if (killTree && child.pid) {
-        killProcessTree(child.pid);
-      } else {
-        child.kill('SIGTERM');
-      }
+    const cleanup = () => {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     };
 
-    if (signal) {
-      signal.addEventListener('abort', abortHandler, { once: true });
-    }
-
-    // Handle process exit
-    child.on('error', (error) => {
-      rejectOnce(
-        new SubprocessError(`Failed to spawn subprocess: ${error.message}`, {
-          code: 'SPAWN_ERROR',
-          signal: null,
-          exitCode: null,
-          command,
-          args,
+    child.on('error', (error: Error) => {
+      cleanup();
+      reject(
+        new SubprocessError(`Failed to spawn ${command}: ${error.message}`, {
+          stdout,
+          stderr,
         })
       );
     });
 
-    child.on('exit', (exitCode, signalCode) => {
-      if (!resolved) {
-        resolveOnce({
-          exitCode,
-          signal: signalCode,
-          stdout,
-          stderr,
-        });
+    child.on('close', (code: number | null, signal: string | null) => {
+      cleanup();
+
+      if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+        // Check if this was due to our timeout
+        if (timeout && timeoutHandle) {
+          reject(
+            new SubprocessError(`${command} timed out after ${timeout}ms`, {
+              signal,
+              stdout,
+              stderr,
+            })
+          );
+        } else {
+          resolve({
+            stdout,
+            stderr,
+            exitCode: code,
+            signal,
+          });
+        }
+        return;
       }
+
+      if (code !== 0) {
+        reject(
+          new SubprocessError(`${command} exited with code ${code}`, {
+            code: code?.toString(),
+            signal: signal ?? undefined,
+            stdout,
+            stderr,
+          })
+        );
+        return;
+      }
+
+      resolve({
+        stdout,
+        stderr,
+        exitCode: code,
+        signal,
+      });
     });
+
+    // Handle abort signal
+    if (signal) {
+      const abortHandler = () => {
+        if (!child.killed) {
+          child.kill('SIGTERM');
+          setTimeout(() => {
+            if (!child.killed) {
+              child.kill('SIGKILL');
+            }
+          }, 5000);
+        }
+      };
+
+      if (signal.aborted) {
+        abortHandler();
+      } else {
+        signal.addEventListener('abort', abortHandler, { once: true });
+      }
+    }
   });
 }
 
 /**
  * Kills a process and its children (process tree).
- * Uses platform-specific commands for maximum effectiveness.
+ * Uses platform-specific methods for thorough cleanup.
  */
-export function killProcessTree(pid: number): void {
+export async function killProcessTree(pid: number, signal: string = 'SIGTERM'): Promise<boolean> {
   try {
-    if (process.platform === 'win32') {
-      // Windows: use taskkill /T /F
-      spawn('taskkill', ['/pid', pid.toString(), '/T', '/F'], {
-        stdio: 'ignore',
+    // Try to kill the process group first (Unix-like)
+    if (process.platform !== 'win32') {
+      process.kill(-pid, signal as NodeJS.Signals);
+      return true;
+    }
+
+    // On Windows, use taskkill
+    const { spawn } = await import('node:child_process');
+    return new Promise((resolve) => {
+      const kill = spawn('taskkill', ['/pid', pid.toString(), '/T', '/F']);
+      kill.on('close', (code) => {
+        resolve(code === 0);
       });
-    } else {
-      // Unix: kill the process group (negative PID)
-      // This works correctly when the child was spawned with detached: true
-      process.kill(-pid, 'SIGKILL');
-    }
-    logger.debug({ pid }, 'Kill signal sent to process tree');
-  } catch (error) {
-    logger.warn({ pid, error }, 'Failed to kill process tree, trying direct kill');
-    try {
-      process.kill(pid, 'SIGKILL');
-    } catch {
-      // Ignore
-    }
+    });
+  } catch {
+    return false;
   }
+}
+
+/**
+ * Spawns a command and returns the child process for manual management.
+ * The caller is responsible for handling the process lifecycle.
+ */
+export function spawnDetached(
+  command: string,
+  args: string[],
+  options: SpawnOptions = {}
+): ChildProcess {
+  return spawn(command, args, {
+    ...options,
+    detached: true,
+    stdio: 'ignore',
+  });
+}
+
+/**
+ * Utility to run a command with timeout and optional cancellation.
+ * Captures stdout and stderr by default.
+ */
+export async function runCommand(
+  command: string,
+  args: string[],
+  options: SpawnWithSignalOptions = {}
+): Promise<SpawnResult> {
+  return spawnWithSignal(command, args, options);
 }

@@ -1,21 +1,20 @@
 /**
  * Public model API.
- * Re-exports all model modules for convenient imports.
+ * Exports all model layer functionality.
  */
 
-export {
-  CancellationController,
-  createCancellationController,
-  withCancellation,
-} from '../cancellation/index.js';
-export type { ReviewModel } from './abstraction.js';
-export { isReviewModel } from './abstraction.js';
+export { createModelProvider, isReviewModel, ReviewModel } from './abstraction.js';
 export type {
+  AbortSignalLike,
+  ContextItem,
+  Diagnostic,
+  ModelEvidence,
+  ModelFinding,
+  ModelProviderConfig,
   ModelRequest,
   ModelResponse,
   ModelUsage,
-} from './types.js';
-export {
-  ModelResponseFindingsSchema,
-  ModelResponseSchema,
+  ProviderType,
+  RepositoryMetadata,
+  ReviewModel as ReviewModelInterface,
 } from './types.js';

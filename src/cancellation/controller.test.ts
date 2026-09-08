@@ -1,169 +1,135 @@
 /**
- * Tests for cancellation/controller.ts
+ * Tests for CancellationController.
  */
 
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import {
+  abortSignalPromise,
   CancellationController,
   createCancellationController,
   withCancellation,
 } from './controller.js';
 
-describe('cancellation:controller', () => {
-  describe('CancellationController', () => {
-    let controller: CancellationController;
-
-    beforeEach(() => {
-      controller = new CancellationController();
-    });
-
-    it('starts with isAborted = false', () => {
-      expect(controller.isAborted).toBe(false);
-      expect(controller.reason).toBeUndefined();
-    });
-
-    it('provides an AbortSignal', () => {
-      expect(controller.signal).toBeInstanceOf(AbortSignal);
-      expect(controller.signal.aborted).toBe(false);
-    });
-
-    it('aborts and sets isAborted = true', () => {
-      controller.abort(new Error('test reason'));
-
-      expect(controller.isAborted).toBe(true);
-      expect(controller.reason).toBeInstanceOf(Error);
-      expect(controller.reason?.message).toBe('test reason');
-      expect(controller.signal.aborted).toBe(true);
-    });
-
-    it('throwIfAborted throws when aborted', () => {
-      controller.abort(new Error('aborted'));
-
-      expect(() => controller.throwIfAborted()).toThrow('aborted');
-    });
-
-    it('throwIfAborted does not throw when not aborted', () => {
-      expect(() => controller.throwIfAborted()).not.toThrow();
-    });
-
-    it('createChildController creates child that aborts with parent', () => {
-      const child = controller.createChildController();
-
-      expect(child.signal.aborted).toBe(false);
-
-      controller.abort(new Error('parent aborted'));
-
-      expect(child.signal.aborted).toBe(true);
-    });
-
-    it('createChildController immediately aborts if parent already aborted', () => {
-      controller.abort(new Error('already aborted'));
-      const child = controller.createChildController();
-
-      expect(child.signal.aborted).toBe(true);
-    });
-
-    it('registerChildController registers external controller', () => {
-      const external = new AbortController();
-      controller.registerChildController(external);
-
-      controller.abort(new Error('parent aborted'));
-
-      expect(external.signal.aborted).toBe(true);
-    });
-
-    it('addEventListener and removeEventListener work', () => {
-      const handler = jest.fn();
-      controller.addEventListener('abort', handler);
-      controller.removeEventListener('abort', handler);
-
-      controller.abort();
-
-      // Handler should not be called since it was removed
-      // But the abort still happens
-      expect(controller.isAborted).toBe(true);
-    });
-
-    it('abort with no reason creates default error', () => {
-      controller.abort();
-
-      expect(controller.reason).toBeInstanceOf(Error);
-      expect(controller.reason?.message).toBe('Cancellation requested');
-    });
-
-    it('multiple aborts are idempotent', () => {
-      controller.abort(new Error('first'));
-      const firstReason = controller.reason;
-      controller.abort(new Error('second'));
-
-      expect(controller.reason).toBe(firstReason);
-    });
+describe('CancellationController', () => {
+  it('creates controller with unaborted signal', () => {
+    const controller = new CancellationController();
+    expect(controller.aborted).toBe(false);
+    expect(controller.signal).toBeDefined();
   });
 
-  describe('createCancellationController', () => {
-    it('creates controller with signal handlers', () => {
-      const controller = createCancellationController();
-
-      expect(controller).toBeInstanceOf(CancellationController);
-      expect(controller.isAborted).toBe(false);
-    });
-
-    it('cleanup function removes signal handlers', () => {
-      const controller = createCancellationController();
-      const cleanup = (controller as any)._cleanup;
-
-      expect(typeof cleanup).toBe('function');
-      cleanup();
-      // No error means cleanup worked
-    });
+  it('aborts controller and marks signal as aborted', () => {
+    const controller = new CancellationController();
+    controller.abort('test reason');
+    expect(controller.aborted).toBe(true);
+    expect(controller.signal.reason).toBe('test reason');
   });
 
-  describe('withCancellation', () => {
-    it('executes operation when not cancelled', async () => {
-      const controller = new CancellationController();
-      const result = await withCancellation(controller, async () => 'success');
+  it('creates child signals that abort with parent', () => {
+    const controller = new CancellationController();
+    const childSignal = controller.createChildSignal();
 
-      expect(result).toBe('success');
+    expect(childSignal.aborted).toBe(false);
+
+    controller.abort('parent abort');
+
+    expect(childSignal.aborted).toBe(true);
+    expect(childSignal.reason).toBe('parent abort');
+  });
+
+  it('throws on throwIfAborted when aborted', () => {
+    const controller = new CancellationController();
+    controller.abort('test');
+
+    expect(() => controller.throwIfAborted()).toThrow('test');
+  });
+
+  it('does not throw when not aborted', () => {
+    const controller = new CancellationController();
+    expect(() => controller.throwIfAborted()).not.toThrow();
+  });
+
+  it('supports addEventListener/removeEventListener', () => {
+    const controller = new CancellationController();
+    const listener = jest.fn();
+
+    controller.addEventListener('abort', listener);
+    controller.abort();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createCancellationController', () => {
+  it('creates controller without parent', () => {
+    const controller = createCancellationController();
+    expect(controller).toBeInstanceOf(CancellationController);
+    expect(controller.aborted).toBe(false);
+  });
+
+  it('aborts child when parent aborts', () => {
+    const parentController = new AbortController();
+    const controller = createCancellationController(parentController.signal);
+
+    expect(controller.aborted).toBe(false);
+
+    parentController.abort('parent reason');
+
+    expect(controller.aborted).toBe(true);
+    expect(controller.signal.reason).toBe('parent reason');
+  });
+
+  it('immediately aborts if parent already aborted', () => {
+    const parentController = new AbortController();
+    parentController.abort('already aborted');
+
+    const controller = createCancellationController(parentController.signal);
+    expect(controller.aborted).toBe(true);
+  });
+});
+
+describe('withCancellation', () => {
+  it('executes operation with cancellation signal', async () => {
+    const result = await withCancellation(async (signal) => {
+      expect(signal).toBeDefined();
+      expect(signal.aborted).toBe(false);
+      return 'success';
     });
 
-    it('throws when cancelled before operation', async () => {
-      const controller = new CancellationController();
-      controller.abort(new Error('cancelled'));
+    expect(result).toBe('success');
+  });
 
-      await expect(withCancellation(controller, async () => 'success')).rejects.toThrow(
-        'cancelled'
-      );
-    });
+  it('propagates external signal', async () => {
+    const controller = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
 
-    it('throws when cancelled during operation', async () => {
-      const controller = new CancellationController();
+    const promise = withCancellation(async (signal) => {
+      receivedSignal = signal;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return 'done';
+    }, controller.signal);
 
-      const promise = withCancellation(controller, async (_signal) => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        return 'success';
-      });
+    controller.abort('external');
 
-      // Cancel after a short delay
-      setTimeout(() => controller.abort(new Error('cancelled during')), 10);
+    await expect(promise).rejects.toThrow('external');
+    expect(receivedSignal!.aborted).toBe(true);
+  });
+});
 
-      await expect(promise).rejects.toThrow('cancelled during');
-    });
+describe('abortSignalPromise', () => {
+  it('rejects when signal aborts', async () => {
+    const controller = new AbortController();
 
-    it('checks cancellation at await points', async () => {
-      const controller = new CancellationController();
+    const promise = abortSignalPromise(controller.signal);
 
-      const promise = withCancellation(controller, async (_signal) => {
-        // First check
-        controller.throwIfAborted();
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        // Second check after await
-        controller.throwIfAborted();
-        return 'success';
-      });
+    setTimeout(() => controller.abort('test abort'), 10);
 
-      setTimeout(() => controller.abort(new Error('cancelled')), 25);
+    await expect(promise).rejects.toThrow('test abort');
+  });
 
-      await expect(promise).rejects.toThrow('cancelled');
-    });
+  it('rejects immediately if already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort('already');
+
+    await expect(abortSignalPromise(controller.signal)).rejects.toThrow('already');
   });
 });
