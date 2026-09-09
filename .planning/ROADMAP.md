@@ -44,7 +44,7 @@ Plans:
 - [x] 01-04-PLAN.md — Ignore handling, file filtering, binary/generated detection
 - [x] 01-05-PLAN.md — Cache infrastructure: project identity, keys, store, LRU, promise pool
 - [x] 01-06-PLAN.md — Cancellation (AbortController), Model abstraction interface
-- [ ] 01-07-PLAN.md — CLI commands: review, init, doctor with exit codes
+- [x] 01-07-PLAN.md — CLI commands: review, init, doctor with exit codes
 
 ### Phase 2: Analysis Layer
 **Goal**: Changed files are parsed for symbols and deterministic diagnostics are collected for AI consumption.
@@ -56,8 +56,12 @@ Plans:
   4. Running `octate review` executes deterministic static analysis: TypeScript compiler, ESLint/Biome for TS/JS; ruff, mypy/pyright, pytest, bandit for Python — respecting the repository's existing configuration
   5. Diagnostics, test discovery results, and security scanner output are collected and structured for AI consumption
   6. Incremental parsing reuses cached results for unchanged files via content-hash-based cache keys
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: no
+
+Plans:
+- [ ] 02-01-PLAN.md — Tree-sitter parsing & symbol extraction (PARSE-01, PARSE-02)
+- [ ] 02-02-PLAN.md — Static analysis orchestration & diagnostics (ANAL-01, ANAL-02)
 
 ### Phase 3: Intelligence Layer
 **Goal**: Repository intelligence graphs are built and relevant context is selected within token budgets for AI review.
@@ -147,8 +151,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Repository Layer | 3/7 | In Progress|  |
-| 2. Analysis Layer | 0/0 | Not started | - |
+| 1. Foundation & Repository Layer | 7/7 | Complete | 2026-09-09 |
+| 2. Analysis Layer | 0/2 | Not started | - |
 | 3. Intelligence Layer | 0/0 | Not started | - |
 | 4. Model Provider | 0/0 | Not started | - |
 | 5. Review Engine | 0/0 | Not started | - |
@@ -162,10 +166,10 @@ Plans:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REPO-01 | Phase 1 | Pending |
-| REPO-02 | Phase 1 | Pending |
-| REPO-03 | Phase 1 | Pending |
-| REPO-04 | Phase 1 | Pending |
+| REPO-01 | Phase 1 | Complete |
+| REPO-02 | Phase 1 | Complete |
+| REPO-03 | Phase 1 | Complete |
+| REPO-04 | Phase 1 | Complete |
 | PARSE-01 | Phase 2 | Pending |
 | PARSE-02 | Phase 2 | Pending |
 | PARSE-03 | Phase 3 | Pending |
@@ -179,7 +183,7 @@ Plans:
 | REV-03 | Phase 5 | Pending |
 | REV-04 | Phase 5 | Pending |
 | MODEL-01 | Phase 4 | Pending |
-| MODEL-02 | Phase 1 | Pending |
+| MODEL-02 | Phase 1 | Complete |
 | MODEL-03 | Phase 4 | Pending |
 | MODEL-04 | Phase 4 | Pending |
 | TUI-01 | Phase 7 | Pending |
@@ -189,9 +193,9 @@ Plans:
 | OUT-02 | Phase 6 | Pending |
 | CONF-01 | Phase 1 | Complete |
 | CONF-02 | Phase 1 | Complete |
-| CACHE-01 | Phase 1 | Pending |
-| CACHE-02 | Phase 1 | Pending |
-| CACHE-03 | Phase 1 | Pending |
+| CACHE-01 | Phase 1 | Complete |
+| CACHE-02 | Phase 1 | Complete |
+| CACHE-03 | Phase 1 | Complete |
 
 **Total v1 requirements: 30** (NOTE: REQUIREMENTS.md summary incorrectly states 28; actual count is 30)
 **Mapped to phases: 30** ✓
