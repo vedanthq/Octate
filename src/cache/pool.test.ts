@@ -54,7 +54,7 @@ describe('PromisePool', () => {
     expect(pool.getPendingCount()).toBe(0);
     expect(pool.getActiveCount()).toBe(0);
 
-    let resolve1: () => void;
+    let resolve1: () => void = () => {};
     const promise1 = new Promise<void>((resolve) => {
       resolve1 = resolve;
     });

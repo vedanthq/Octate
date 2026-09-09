@@ -170,9 +170,9 @@ async function runReview(
     );
 
     // Run review with cancellation
-    const result = await withCancellation(controller, async (signal) => {
+    const result = await withCancellation(async (signal) => {
       return executeReview(scope, config, signal);
-    });
+    }, controller.signal);
 
     // Output results
     await outputResults(result, options);

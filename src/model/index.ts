@@ -3,7 +3,7 @@
  * Exports all model layer functionality.
  */
 
-export { createModelProvider, isReviewModel, ReviewModel } from './abstraction.js';
+export { createModelProvider, isReviewModel, defaultReviewModel } from './abstraction.js';
 export type {
   AbortSignalLike,
   ContextItem,

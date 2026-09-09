@@ -1,0 +1,48 @@
+# Octate Configuration
+# See https://octate.dev/config for full documentation
+
+version: "1.0.0"
+
+# Project identification
+project:
+  name: "Octate"
+  # description: "My awesome project"  # Optional project description
+
+# Review behavior configuration
+review:
+  # Minimum severity to report: critical, high, medium, low, info
+  severity: "medium"
+  # Maximum number of findings to report (1-100)
+  max_findings: 50
+  # Enable/disable specific reviewer types (all enabled by default)
+  # reviewers:
+  #   structural: true
+  #   semantic: true
+  #   security: true
+
+# Custom rules to apply during review
+# Each rule is a reference to a built-in or custom rule
+rules: []
+  # - "no-console-log"
+  # - "require-error-handling"
+  # - "no-hardcoded-secrets"
+
+# Architecture constraints
+architecture:
+  # Module boundaries that should not be crossed
+  # boundaries:
+  #   - "src/core"
+  #   - "src/api"
+  # Forbidden dependency patterns (glob patterns)
+  # forbidden_dependencies:
+  #   - "lodash"
+  #   - "moment"
+  #   - "@internal/*"
+
+# Additional ignore patterns (extends .gitignore and .octateignore)
+# These patterns are applied during file discovery and diff generation
+ignore: []
+  # - "*.generated.ts"
+  # - "dist/"
+  # - "vendor/"
+  # - "*.min.js"

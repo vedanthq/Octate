@@ -10,6 +10,13 @@ import type { IgnoreMatcher } from './ignore.js';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB default
 const BINARY_SAMPLE_SIZE = 8192; // Check first 8KB for binary detection
 
+/**
+ * Safely extracts file size from stats, defaulting to 0 if undefined.
+ */
+function getSafeFileSize(stats: { size?: number }): number {
+  return stats.size ?? 0;
+}
+
 const GENERATED_PATTERNS = [
   /^\s*\/\/\s*@generated/i,
   /^\s*\/\/\s*Generated\s+by/i,
@@ -103,6 +110,7 @@ export async function isBinaryFileFast(filePath: string): Promise<boolean> {
     let nonPrintable = 0;
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
+      if (char === undefined) continue;
       const code = char.charCodeAt(0);
       // Allow: printable (32-126), newline (10), tab (9), carriage return (13)
       if (code !== 9 && code !== 10 && code !== 13 && (code < 32 || code > 126)) {
@@ -201,16 +209,17 @@ export class FileFilter {
 
   constructor(ignoreMatcher: IgnoreMatcher, config: FileFilterConfig = {}) {
     this.ignoreMatcher = ignoreMatcher;
+    const additionalIgnorePatterns = config.additionalIgnorePatterns ?? [];
     this.config = {
       maxFileSize: config.maxFileSize ?? MAX_FILE_SIZE,
-      additionalIgnorePatterns: config.additionalIgnorePatterns ?? [],
+      additionalIgnorePatterns,
       allowBinary: config.allowBinary ?? false,
       allowGenerated: config.allowGenerated ?? false,
     };
 
     // Add additional patterns to matcher
-    if (this.config.additionalIgnorePatterns.length > 0) {
-      this.ignoreMatcher.add(this.config.additionalIgnorePatterns);
+    if (additionalIgnorePatterns.length > 0) {
+      this.ignoreMatcher.add(additionalIgnorePatterns);
     }
   }
 
@@ -224,18 +233,12 @@ export class FileFilter {
     // 1. Check ignore patterns first (fastest)
     const isIgnored = this.ignoreMatcher.ignores(relativePath);
 
-    // 2. Get file stats for size check
+// 2. Get file stats for size check
     let size = 0;
     let isLarge = false;
-    try {
-      const stats = await stat(absolutePath);
-      size = stats.size;
-      isLarge = size > this.config.maxFileSize;
-    } catch {
-      // File doesn't exist or can't stat
-      size = 0;
-      isLarge = false;
-    }
+    const stats = await stat(absolutePath);
+    size = getSafeFileSize(stats);
+    isLarge = size > (this.config.maxFileSize ?? MAX_FILE_SIZE);
 
     // 3. Check binary (only if not ignored and not large)
     let isBinary = false;
@@ -250,32 +253,39 @@ export class FileFilter {
     }
 
     // Determine if should analyze
+    const allowBinary = this.config.allowBinary ?? false;
+    const allowGenerated = this.config.allowGenerated ?? false;
+    const maxFileSize = this.config.maxFileSize ?? MAX_FILE_SIZE;
+    
     const shouldAnalyze =
       !isIgnored &&
       !isLarge &&
-      (!isBinary || this.config.allowBinary) &&
-      (!isGenerated || this.config.allowGenerated);
+      (!isBinary || allowBinary) &&
+      (!isGenerated || allowGenerated);
     let reason: string | undefined;
 
     if (isIgnored) {
       reason = 'File matches ignore patterns';
     } else if (isLarge) {
-      reason = `File exceeds max size (${this.config.maxFileSize} bytes)`;
-    } else if (isBinary && !this.config.allowBinary) {
+      reason = `File exceeds max size (${maxFileSize} bytes)`;
+    } else if (isBinary && !allowBinary) {
       reason = 'Binary file';
-    } else if (isGenerated && !this.config.allowGenerated) {
+    } else if (isGenerated && !allowGenerated) {
       reason = 'Generated file';
     }
 
-    return {
+    const result: FileFilterResult = {
       shouldAnalyze,
-      reason,
       isBinary,
       isGenerated,
       isLarge,
       isIgnored,
       size,
     };
+    if (reason !== undefined) {
+      result.reason = reason;
+    }
+    return result;
   }
 
   /**

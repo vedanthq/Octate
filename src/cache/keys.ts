@@ -53,7 +53,16 @@ export function parseCacheKey(key: string): CacheKey | null {
   const parts = key.split(':');
   if (parts.length !== 5) return null;
 
-  const [contentHash, filePath, parserVersion, language, configHash] = parts;
+  const contentHash = parts[0];
+  const filePath = parts[1];
+  const parserVersion = parts[2];
+  const language = parts[3];
+  const configHash = parts[4];
+
+  if (!contentHash || !filePath || !parserVersion || !language || !configHash) {
+    return null;
+  }
+
   return {
     contentHash,
     filePath,

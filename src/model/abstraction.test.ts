@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from '@jest/globals';
-import { createModelProvider, isReviewModel, ReviewModel } from './abstraction.js';
+import { createModelProvider, isReviewModel, defaultReviewModel } from './abstraction.js';
 import type { ModelFinding, ModelRequest, ModelResponse, ProviderType } from './types.js';
 
 describe('ReviewModel interface', () => {
@@ -24,7 +24,7 @@ describe('ReviewModel interface', () => {
       outputSchema: '{}',
     };
 
-    await expect(ReviewModel.generate(mockRequest)).rejects.toThrow(
+    await expect(defaultReviewModel.generate(mockRequest)).rejects.toThrow(
       'must be implemented by provider'
     );
   });

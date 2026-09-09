@@ -78,6 +78,7 @@ export function mergeConfigs(
       for (const [key, value] of Object.entries(source)) {
         if (
           value !== null &&
+          value !== undefined &&
           typeof value === 'object' &&
           !Array.isArray(value) &&
           key in result &&
@@ -88,7 +89,7 @@ export function mergeConfigs(
             result[key] as Record<string, unknown>,
             value as Record<string, unknown>
           );
-        } else if (value !== undefined) {
+        } else if (value !== undefined && value !== null) {
           (result as Record<string, unknown>)[key] = value;
         }
       }

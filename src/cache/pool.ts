@@ -80,9 +80,22 @@ export class PromisePool {
 
     // Wait for remaining
     while (executing.size > 0) {
-      const promise = await Promise.race(executing);
-      executing.delete(promise);
-      yield promise;
+      const result = await Promise.race(executing);
+      // Find and remove the completed promise
+      for (const p of executing) {
+        try {
+          // Check if this promise is settled by trying to get its result
+          const isSettled = await Promise.race([p, Promise.resolve(null)]);
+          if (isSettled !== null) {
+            executing.delete(p);
+            break;
+          }
+        } catch {
+          executing.delete(p);
+          break;
+        }
+      }
+      yield result;
     }
   }
 

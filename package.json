@@ -6,6 +6,9 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "bin": {
+    "octate": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/cli.ts",

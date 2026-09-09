@@ -4,7 +4,7 @@
  */
 
 import { type ChildProcess, type SpawnOptions, spawn } from 'node:child_process';
-import type { AbortSignal } from 'node:events';
+// AbortSignal is a global in Node.js 18+
 
 /**
  * Error thrown when a subprocess fails or is killed.
@@ -135,14 +135,14 @@ export function spawnWithSignal(
       }
 
       if (code !== 0) {
-        reject(
-          new SubprocessError(`${command} exited with code ${code}`, {
-            code: code?.toString(),
-            signal: signal ?? undefined,
-            stdout,
-            stderr,
-          })
-        );
+reject(
+        new SubprocessError(`${command} exited with code ${code}`, {
+          code: code?.toString() ?? '',
+          signal: signal ?? '',
+          stdout,
+          stderr,
+        })
+      );
         return;
       }
 

@@ -13,6 +13,6 @@ export {
   killProcessTree,
   type SpawnWithSignalOptions,
   SubprocessError,
-  type SubprocessResult,
+  type SpawnResult,
   spawnWithSignal,
 } from './subprocess.js';

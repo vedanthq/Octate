@@ -255,14 +255,13 @@ async function checkNvidiaConnectivity(): Promise<DoctorCheck> {
 async function checkCacheHealth(): Promise<DoctorCheck> {
   try {
     const repoRoot = process.cwd();
-    const { computeProjectIdentity } = await import('../cache/identity.js');
-    const projectIdentity = await computeProjectIdentity(repoRoot);
-    const cacheDir = getCacheDir(projectIdentity);
+    const { getCacheDir, initializeProjectCache } = await import('../cache/identity.js');
+    const cachePaths = await getCacheDir(repoRoot);
     await initializeProjectCache(repoRoot);
 
     // Create cache store to test
-    const store = createCacheStore({
-      rootDir: cacheDir,
+    const store = await createCacheStore({
+      rootDir: cachePaths.cache,
       maxSize: 100 * 1024 * 1024, // 100MB default
     });
 
@@ -273,15 +272,15 @@ async function checkCacheHealth(): Promise<DoctorCheck> {
     const retrieved = await store.get(testKey);
     await store.delete(testKey);
 
-    const isWorking = retrieved && typeof retrieved === 'object' && 'test' in retrieved;
+    const isWorking = retrieved && typeof retrieved === 'object' && retrieved.value && typeof retrieved.value === 'object' && 'test' in retrieved.value;
 
     // Get cache stats
     let size = 0;
     const entryCount = 0;
     try {
       const { stat } = await import('node:fs/promises');
-      const stats = await stat(cacheDir);
-      size = stats.size;
+      const stats = await stat(cachePaths.cache);
+      size = stats.size ?? 0;
     } catch {
       // Ignore
     }
@@ -291,7 +290,7 @@ async function checkCacheHealth(): Promise<DoctorCheck> {
       status: isWorking ? 'pass' : 'warn',
       message: isWorking ? 'Cache is healthy and operational' : 'Cache read/write test failed',
       details: {
-        cacheDir,
+        cacheDir: cachePaths.cache,
         sizeBytes: size,
         entryCount,
         readWriteTest: isWorking ? 'pass' : 'fail',

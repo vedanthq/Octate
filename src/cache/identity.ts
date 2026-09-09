@@ -71,7 +71,7 @@ function extractRemoteUrl(configContent: string): string | null {
 
     if (currentSection.startsWith('remote "') && trimmed.startsWith('url')) {
       const match = trimmed.match(/url\s*=\s*(.+)/);
-      if (match) {
+      if (match && match[1]) {
         return match[1].trim();
       }
     }

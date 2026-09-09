@@ -10,10 +10,15 @@ export const ReviewConfigSchema = z.object({
   maxFindings: z.number().int().positive().max(100).default(50),
 });
 
-export const ArchitectureConfigSchema = z.object({
-  boundaries: z.array(z.string()).default([]),
-  forbiddenDependencies: z.array(z.string()).default([]),
-});
+export const ArchitectureConfigSchema = z
+  .union([
+    z.object({
+      boundaries: z.array(z.string()).default([]),
+      forbiddenDependencies: z.array(z.string()).default([]),
+    }),
+    z.null(),
+  ])
+  .transform((val) => (val === null ? { boundaries: [], forbiddenDependencies: [] } : val));
 
 export const ProjectConfigSchema = z.object({
   name: z.string().min(1),

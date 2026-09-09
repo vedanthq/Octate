@@ -9,7 +9,7 @@ import type {
   ModelRequest,
   ModelResponse,
   ProviderType,
-  ReviewModel,
+  ReviewModel as ReviewModelInterface,
 } from './types.js';
 
 /**
@@ -18,7 +18,7 @@ import type {
  * This is the ONLY interface the core review engine depends on.
  * Provider implementations (LocalNvidiaProvider, HostedProvider) implement this.
  */
-export const ReviewModel: ReviewModel = {
+export const defaultReviewModel: ReviewModelInterface = {
   /**
    * Generates a model response for code review.
    *
@@ -34,14 +34,17 @@ export const ReviewModel: ReviewModel = {
  * Factory function to create provider instances.
  * Will be implemented in Phase 4.
  */
-export function createModelProvider(type: ProviderType, config: ModelProviderConfig): ReviewModel {
+export function createModelProvider(
+  type: ProviderType,
+  config: ModelProviderConfig
+): ReviewModelInterface {
   throw new Error(`Provider ${type} not yet implemented (Phase 4)`);
 }
 
 /**
  * Validates that an object implements the ReviewModel interface.
  */
-export function isReviewModel(obj: unknown): obj is ReviewModel {
+export function isReviewModel(obj: unknown): obj is ReviewModelInterface {
   return (
     typeof obj === 'object' &&
     obj !== null &&
