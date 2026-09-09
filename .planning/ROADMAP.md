@@ -60,8 +60,8 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 02-01-PLAN.md — Tree-sitter parsing & symbol extraction (PARSE-01, PARSE-02)
-- [ ] 02-02-PLAN.md — Static analysis orchestration & diagnostics (ANAL-01, ANAL-02)
+- [x] 02-01-PLAN.md — Tree-sitter parsing & symbol extraction (PARSE-01, PARSE-02)
+- [x] 02-02-PLAN.md — Static analysis orchestration & diagnostics (ANAL-01, ANAL-02)
 
 ### Phase 3: Intelligence Layer
 **Goal**: Repository intelligence graphs are built and relevant context is selected within token budgets for AI review.
@@ -152,7 +152,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Repository Layer | 7/7 | Complete | 2026-09-09 |
-| 2. Analysis Layer | 0/2 | Not started | - |
+| 2. Analysis Layer | 2/2 | Planned | - |
 | 3. Intelligence Layer | 0/0 | Not started | - |
 | 4. Model Provider | 0/0 | Not started | - |
 | 5. Review Engine | 0/0 | Not started | - |
