@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import { ReferenceGraph } from '../intelligence/graph/reference.js';
 import { SymbolIndex } from '../intelligence/index/symbol-index.js';
 import { createTestContext, createTestFinding, MockReviewModel } from './__tests__/mocks.js';
-import { createReviewEngine, ReviewEngine } from './engine.js';
+import { createReviewEngine, type ReviewEngine } from './engine.js';
 import type { ReviewEngineInput } from './types.js';
 
 describe('ReviewEngine', () => {
@@ -83,7 +83,9 @@ describe('ReviewEngine', () => {
     expect(result.summary.durationMs).toBeGreaterThanOrEqual(0);
 
     expect(result.findings.length).toBe(1);
-    const topFinding = result.findings[0]!;
+    const topFinding = result.findings[0];
+    expect(topFinding).toBeDefined();
+    if (!topFinding) throw new Error('Expected top finding');
     expect(topFinding.severity).toBe('high');
     expect(topFinding.category).toBe('security');
     expect(topFinding.compositeScore).toBeGreaterThan(0);
@@ -162,8 +164,8 @@ describe('ReviewEngine', () => {
     }));
 
     // Semantic reviewer fails
-    model.setRoleHandler('semantic', async () => {
-      throw new Error('Semantic model timeout');
+    model.setRoleHandler('semantic', () => {
+      return Promise.reject(new Error('Semantic model timeout'));
     });
 
     model.setRoleHandler('critic', async () => ({

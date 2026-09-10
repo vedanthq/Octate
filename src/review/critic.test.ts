@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { ModelError, ValidationError } from '../errors/index.js';
 import type { ReviewContext } from '../intelligence/types.js';
-import type { ModelFinding, ModelRequest, ModelResponse } from '../model/types.js';
+import type { ModelFinding, ModelRequest } from '../model/types.js';
 import { createTestContext, createTestFinding, MockReviewModel } from './__tests__/mocks.js';
 import { executeCriticStage, filterDeterministicHardFloor, isActionableFix } from './critic.js';
 
@@ -80,9 +80,9 @@ describe('critic', () => {
       const result = await filterDeterministicHardFloor({
         findings: [phantom, valid],
         repoRoot: '/repo',
-        getFileLineCount: async (file: string) => {
-          if (file === 'src/handler.ts') return 50;
-          return 100;
+        getFileLineCount: (file: string) => {
+          if (file === 'src/handler.ts') return Promise.resolve(50);
+          return Promise.resolve(100);
         },
       });
 
@@ -183,12 +183,12 @@ describe('critic', () => {
       let callCount = 0;
       const validFinding = createTestFinding({ reviewer: 'critic' });
 
-      mockModel.setHandler('critic', async (_req: ModelRequest) => {
+      mockModel.setHandler('critic', (_req: ModelRequest) => {
         callCount++;
         if (callCount === 1) {
-          throw new ValidationError('Malformed JSON array from model');
+          return Promise.reject(new ValidationError('Malformed JSON array from model'));
         }
-        return {
+        return Promise.resolve({
           findings: [validFinding],
           usage: {
             promptTokens: 80,
@@ -198,7 +198,7 @@ describe('critic', () => {
           model: 'critic-model',
           latencyMs: 15,
           finishReason: 'stop',
-        };
+        });
       });
 
       const result = await executeCriticStage({
@@ -218,9 +218,9 @@ describe('critic', () => {
 
     it('throws ModelError with exit code 4 when Critic call fails after retry', async () => {
       let callCount = 0;
-      mockModel.setHandler('critic', async (_req: ModelRequest) => {
+      mockModel.setHandler('critic', (_req: ModelRequest) => {
         callCount++;
-        throw new ValidationError(`Model failure on attempt ${callCount}`);
+        return Promise.reject(new ValidationError(`Model failure on attempt ${callCount}`));
       });
 
       let caughtError: unknown;
