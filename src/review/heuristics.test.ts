@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import type { ParsedFile, Symbol as AnalysisSymbol } from '../analysis/types.js';
+import type { Symbol as AnalysisSymbol, ParsedFile } from '../analysis/types.js';
 import { SymbolIndex } from '../intelligence/index/symbol-index.js';
 import { createTestFinding } from './__tests__/mocks.js';
 import {
@@ -9,10 +9,7 @@ import {
   shouldTriggerSemanticReviewer,
 } from './heuristics.js';
 
-function createMockSymbolIndex(
-  file: string,
-  symbols: Array<Partial<AnalysisSymbol>>
-): SymbolIndex {
+function createMockSymbolIndex(file: string, symbols: Array<Partial<AnalysisSymbol>>): SymbolIndex {
   const index = new SymbolIndex();
   const parsedSymbols: AnalysisSymbol[] = symbols.map((s, idx) => ({
     id: s.id ?? `sym-${idx}`,

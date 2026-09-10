@@ -3,12 +3,7 @@
  */
 
 import type { ReviewContext } from '../../intelligence/types.js';
-import type {
-  ModelFinding,
-  ModelRequest,
-  ModelResponse,
-  ReviewModel,
-} from '../../model/types.js';
+import type { ModelFinding, ModelRequest, ModelResponse, ReviewModel } from '../../model/types.js';
 
 /**
  * In-memory configurable mock ReviewModel for testing DAG and Critic interactions.
@@ -50,6 +45,7 @@ export class MockReviewModel implements ReviewModel {
    * or returns a default empty response.
    */
   public async generate(request: ModelRequest): Promise<ModelResponse> {
+    await Promise.resolve();
     this.calls.push(request);
     const task = request.reviewTask.toLowerCase();
 

@@ -24,7 +24,7 @@ export interface LineInterval {
  */
 export function parseDiffRanges(diff: string): Map<string, LineInterval[]> {
   const result = new Map<string, LineInterval[]>();
-  if (!diff || !diff.trim()) {
+  if (!diff?.trim()) {
     return result;
   }
 
@@ -50,9 +50,9 @@ export function parseDiffRanges(diff: string): Map<string, LineInterval[]> {
     if (currentFile && line.startsWith('@@ ')) {
       // Format: @@ -oldStart,oldLen +newStart,newLen @@
       const match = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
-      if (match) {
-        const start = parseInt(match[1]!, 10);
-        const len = match[2] !== undefined ? parseInt(match[2]!, 10) : 1;
+      if (match?.[1]) {
+        const start = parseInt(match[1], 10);
+        const len = match[2] !== undefined ? parseInt(match[2], 10) : 1;
         const end = len === 0 ? start : start + len - 1;
         const ranges = result.get(currentFile);
         if (ranges) {
@@ -65,15 +65,7 @@ export function parseDiffRanges(diff: string): Map<string, LineInterval[]> {
   return result;
 }
 
-const EXECUTABLE_EXTENSIONS = new Set([
-  '.ts',
-  '.tsx',
-  '.js',
-  '.jsx',
-  '.py',
-  '.mjs',
-  '.cjs',
-]);
+const EXECUTABLE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.py', '.mjs', '.cjs']);
 
 const CONTROL_FLOW_REGEX =
   /\b(if|else|switch|case|for|while|do|try|catch|finally|throw|return|yield|await|async|def|lambda|match)\b/;
@@ -91,7 +83,7 @@ export function shouldTriggerSemanticReviewer(params: {
 }): boolean {
   const { diff, changedFiles, symbolIndex } = params;
 
-  if (!diff || !diff.trim() || changedFiles.length === 0) {
+  if (!diff?.trim() || changedFiles.length === 0) {
     return false;
   }
 
@@ -195,7 +187,7 @@ export function shouldTriggerSecurityReviewer(params: {
 }): boolean {
   const { diff, changedFiles, symbolIndex } = params;
 
-  if (changedFiles.length === 0 && (!diff || !diff.trim())) {
+  if (changedFiles.length === 0 && !diff?.trim()) {
     return false;
   }
 
@@ -292,7 +284,7 @@ export function isDeliberateIntentOrMock(params: {
         'i'
       );
       const match = fileSectionRegex.exec(diff);
-      if (match && match[1] && INTENT_COMMENT_REGEX.test(match[1])) {
+      if (match?.[1] && INTENT_COMMENT_REGEX.test(match[1])) {
         return true;
       }
     } else {
