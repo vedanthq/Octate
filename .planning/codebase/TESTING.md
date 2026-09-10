@@ -1,375 +1,173 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-09-08
+**Analysis Date:** 2026-09-10
 
 ## Test Framework
 
-**Runner:** Jest 30.5.1 with `ts-jest` 29.4.12 (ESM preset)
-- Config: `jest.config.ts`
-- Test environment: Node.js
-- ESM support: experimental VM modules (`NODE_OPTIONS=--experimental-vm-modules`)
-- Transform: `ts-jest` with project tsconfig.json
+**Runner:**
+- Jest 30.5.1 with `ts-jest` 29.4.12 (ESM preset)
+- Configuration: `jest.config.ts`
+- Environment: Node.js with native ECMAScript modules enabled via `NODE_OPTIONS=--experimental-vm-modules`
+- TypeScript Transform: `ts-jest` targeting `tsconfig.json` with `useESM: true`
 
-**Assertion Library:** `@jest/globals` (native Jest globals: `describe`, `it`, `expect`, `beforeEach`, `afterEach`, `jest`)
+**Assertion Library:**
+- `@jest/globals` (`describe`, `it`, `expect`, `beforeEach`, `afterEach`, `jest`)
 
 **Run Commands:**
 ```bash
-pnpm test              # Run all tests
-pnpm test:watch        # Watch mode
-pnpm test -- --coverage # With coverage
+pnpm test               # Run all 30 test suites (439 tests)
+pnpm test:watch         # Run tests in watch mode
+pnpm test -- path/to/file.test.ts  # Run single test file
+pnpm test -- --coverage # Generate test coverage report
 ```
 
-**Jest Configuration Highlights:**
-- Roots: `<rootDir>/src`
-- Test match: `**/*.test.ts`
-- Module mapper: `^@/(.*)$` → `<rootDir>/src/$1`, `^(\.{1,2}/.*)\.js$` → `$1`
-- Coverage: `src/**/*.ts`, excludes `*.test.ts` and `cli.ts`
-- Verbose: true
-- Extensions: `.ts`, `.js`, `.json`
+**Test Suite Health:**
+- **30 test suites**, **439 tests**, 0 snapshots
+- 100% passing rate across CLI, commands, repository, analysis, cache, config, logging, cancellation, and error layers
 
 ## Test File Organization
 
-**Location:** Co-located with source files
+**Location:** Co-located next to the corresponding source module:
 - `src/commands/review.ts` → `src/commands/review.test.ts`
-- `src/config/merger.ts` → `src/config/merger.test.ts`
-- `src/repository/discovery.ts` → `src/repository/discovery.test.ts`
+- `src/analysis/orchestrator.ts` → `src/analysis/orchestrator.test.ts`
+- `src/analysis/parser/index.ts` → `src/analysis/parser/index.test.ts`
+- `src/analysis/symbols/index.ts` → `src/analysis/symbols/index.test.ts`
+- `src/analysis/diagnostics/tools.ts` → `src/analysis/diagnostics/tools.test.ts`
+- `src/cache/keys.ts` → `src/cache/keys.test.ts`
 
-**Naming:** `[name].test.ts` suffix
-
-**Structure:**
+**Complete Test Suite Map:**
 ```
 src/
-├── commands/
-│   ├── review.ts
-│   ├── review.test.ts
-│   ├── init.ts
-│   ├── init.test.ts
-│   ├── doctor.ts
-│   └── doctor.test.ts
-├── config/
-│   ├── schema.ts
-│   ├── schema.test.ts
-│   ├── loader.ts
-│   ├── loader.test.ts
-│   ├── merger.ts
-│   └── merger.test.ts
-├── repository/
-│   ├── discovery.ts
-│   ├── discovery.test.ts
-│   ├── monorepo.ts
-│   ├── monorepo.test.ts
-│   └── ...
-├── cancellation/
-│   ├── controller.ts
-│   ├── controller.test.ts
-│   └── ...
+├── analysis/
+│   ├── orchestrator.test.ts      # Pipeline integration (parsing + diagnostics + metrics)
+│   ├── parser/
+│   │   ├── index.test.ts         # Tree-sitter parsing & AST creation
+│   │   └── languages.test.ts     # Language detection by extension & grammar loading
+│   ├── symbols/
+│   │   └── index.test.ts         # AST query extraction for TS and Python
+│   └── diagnostics/
+│       ├── index.test.ts         # Parallel diagnostics execution with concurrency pool
+│       ├── severity.test.ts      # Severity normalization & diagnostic mapping
+│       └── tools.test.ts         # Tool detection & subprocess execution
 ├── cache/
-│   ├── store.ts
-│   ├── store.test.ts
-│   └── ...
-├── logging/
-│   ├── index.ts
-│   └── index.test.ts
+│   ├── identity.test.ts          # Project identity & directory hashing
+│   ├── keys.test.ts              # Cache key generation, tool versions, config hashes
+│   ├── lru.test.ts               # In-memory LRU eviction & TTL
+│   ├── pool.test.ts              # PromisePool concurrency limiting
+│   └── store.test.ts             # Atomic file writes & cache storage
+├── cancellation/
+│   ├── controller.test.ts        # CancellationController signal propagation
+│   └── subprocess.test.ts        # spawnWithSignal & process tree termination
+├── commands/
+│   ├── doctor.test.ts            # Doctor environment checks
+│   ├── init.test.ts              # Init configuration generation
+│   └── review.test.ts            # Review option validation & execution
+├── config/
+│   ├── loader.test.ts            # File resolution & cosmiconfig loading
+│   ├── merger.test.ts            # Hierarchical config precedence
+│   └── schema.test.ts            # Zod validation & defaults
 ├── errors/
-│   ├── index.ts
-│   └── index.test.ts
+│   └── index.test.ts             # Error classes, exit codes, & type guards
+├── logging/
+│   └── index.test.ts             # Structured logging, child loggers, & redaction
 ├── model/
-│   ├── abstraction.ts
-│   ├── abstraction.test.ts
-│   └── ...
+│   └── abstraction.test.ts       # Model abstraction interface contracts
+├── repository/
+│   ├── discovery.test.ts         # Git root finding
+│   ├── filter.test.ts            # File filtering (binary, generated, symlink)
+│   ├── git.test.ts               # isomorphic-git wrapper operations
+│   ├── ignore.test.ts            # .gitignore & .octateignore parsing
+│   ├── monorepo.test.ts          # Monorepo detection across package managers
+│   └── scope.test.ts             # Scope resolution (--staged, --commit, etc.)
 └── types/
-    ├── index.ts
-    └── index.test.ts
+    └── index.test.ts             # Domain type guards
 ```
 
-## Test Structure
+## Testing Patterns & Best Practices
 
-**Suite Organization:**
-```typescript
-import { describe, expect, it, beforeEach, afterEach, jest } from '@jest/globals';
-import { createReviewCommand } from './review.js';
+### 1. Isolated Temporary Directories for Filesystem & Git Operations
+Tests creating repository states or cache files must use isolated temporary directories created in `beforeEach` and cleaned up in `afterEach`:
 
-describe('commands:review', () => {
-  let command: ReturnType<typeof createReviewCommand>;
-
-  beforeEach(() => {
-    command = createReviewCommand();
-  });
-
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
-  describe('createReviewCommand', () => {
-    it('creates command with correct name and description', () => {
-      expect(command.name()).toBe('review');
-      expect(command.description()).toBe('Run code review on the specified scope');
-    });
-
-    it('has all required options', () => {
-      const options = command.options.map((o) => o.flags);
-      expect(options).toContain('-s, --staged');
-      expect(options).toContain('--sarif');
-    });
-  });
-
-  describe('validateScope', () => {
-    it('rejects when no scope specified', async () => { ... });
-  });
-});
-```
-
-**Naming Convention:**
-- Top-level `describe`: module path (e.g., `'commands:review'`, `'config/merger'`, `'CancellationController'`)
-- Nested `describe`: function or feature being tested
-- `it` blocks: specific behavior in natural language
-
-## Setup & Teardown
-
-**Common Patterns:**
-
-1. **Temporary directories for filesystem tests:**
 ```typescript
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 
-let testDir: string;
-let originalCwd: string;
+describe('repository-or-cache-module', () => {
+  let testDir: string;
+  let originalCwd: string;
 
-beforeEach(async () => {
-  originalCwd = process.cwd();
-  testDir = join(tmpdir(), `octate-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  await mkdir(testDir, { recursive: true });
-  process.chdir(testDir);
-});
-
-afterEach(async () => {
-  process.chdir(originalCwd);
-  await rm(testDir, { recursive: true, force: true });
-});
-```
-
-2. **Environment variable isolation:**
-```typescript
-let originalEnv: NodeJS.ProcessEnv;
-
-beforeEach(() => {
-  originalEnv = { ...process.env };
-});
-
-afterEach(() => {
-  process.env = originalEnv;
-});
-```
-
-3. **Jest mock reset:**
-```typescript
-afterEach(() => {
-  jest.resetAllMocks();
-});
-```
-
-## Mocking
-
-**Framework:** Jest built-in (`jest.fn()`, `jest.spyOn()`)
-
-**Patterns:**
-
-1. **Function mocks:**
-```typescript
-const listener = jest.fn();
-controller.addEventListener('abort', listener);
-controller.abort();
-expect(listener).toHaveBeenCalledTimes(1);
-```
-
-2. **Module mocking (manual):**
-```typescript
-// Mocking fs/promises for isolated tests
-const mockWriteFile = jest.fn();
-jest.unstable_mockModule('node:fs/promises', () => ({
-  writeFile: mockWriteFile,
-  // ...
-}));
-```
-
-3. **Type-only imports for mocking:**
-```typescript
-import type { CacheStore } from './store.js';
-// Use in tests with partial implementations
-```
-
-**What to Mock:**
-- External dependencies: filesystem (in unit tests), network calls, timers
-- Time-dependent code: `jest.useFakeTimers()`
-- Randomness: `jest.spyOn(Math, 'random').mockReturnValue(0.5)`
-
-**What NOT to Mock:**
-- Internal pure functions (test behavior, not implementation)
-- TypeScript types (compile-time only)
-- Simple data transformations
-
-**Integration-style Tests (real filesystem):**
-Many tests use real `node:fs/promises` with temp directories rather than mocking:
-```typescript
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
-it('finds .git directory from subdirectory', async () => {
-  const subDir = path.join(testDir, 'src', 'lib');
-  await fs.mkdir(subDir, { recursive: true });
-  const result = await findGitRoot(subDir);
-  expect(result).toBe(testDir);
-});
-```
-
-## Fixtures and Factories
-
-**Test Data Construction:**
-- Inline object literals for simple cases
-- Factory functions for complex repeated structures
-
-```typescript
-// In test file
-const createMockConfig = (overrides: Partial<OctateConfig> = {}): OctateConfig => ({
-  ...DefaultConfig,
-  project: { name: 'test-project' },
-  review: { severity: 'medium', maxFindings: 50 },
-  ...overrides,
-});
-
-// In schema.test.ts - valid/invalid config fixtures
-const validConfig = {
-  version: '1.0.0',
-  project: { name: 'test' },
-  review: { severity: 'medium', maxFindings: 50 },
-};
-
-const invalidConfig = {
-  version: '1.0',
-  project: { name: '' },
-};
-```
-
-**Shared fixtures:** Not yet extracted to separate fixture files (codebase is small)
-
-## Coverage
-
-**Requirements:** No enforced minimum threshold currently
-
-**Collection:**
-- From: `src/**/*.ts`
-- Excludes: `src/**/*.test.ts`, `src/cli.ts`
-- Directory: `coverage/`
-
-**View Coverage:**
-```bash
-pnpm test -- --coverage
-# Then open coverage/lcov-report/index.html
-```
-
-## Test Types
-
-**Unit Tests:**
-- Pure functions: `mergeConfigs`, `parseEnvConfig`, `toCamelCase`
-- Type guards: `isRepository`, `isOctateError`
-- Class methods: `CancellationController`, `CacheStore`
-- No external dependencies, fast execution
-
-**Integration Tests:**
-- Filesystem operations: `findGitRoot`, `discoverRepository`, `CacheStore` with real FS
-- Config loading: `loadProjectConfig`, `loadGlobalConfig`, `loadConfig`
-- Command parsing: Commander.js command structure validation
-
-**E2E Tests:** Not yet implemented (planned for Phase 6+)
-- Full CLI invocation via `main()`
-- Multi-command workflows
-
-## Common Patterns
-
-**Async Testing:**
-```typescript
-it('executes operation with cancellation signal', async () => {
-  const result = await withCancellation(async (signal) => {
-    expect(signal.aborted).toBe(false);
-    return 'success';
+  beforeEach(async () => {
+    originalCwd = process.cwd();
+    testDir = join(tmpdir(), `octate-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    await mkdir(testDir, { recursive: true });
+    process.chdir(testDir);
   });
-  expect(result).toBe('success');
-});
 
-it('propagates external signal', async () => {
-  const controller = new AbortController();
-  const promise = withCancellation(async (signal) => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return 'done';
-  }, controller.signal);
-
-  controller.abort('external');
-  await expect(promise).rejects.toThrow('external');
-});
-```
-
-**Error Testing:**
-```typescript
-it('throws ConfigurationError for empty project name', () => {
-  const invalid = { ...DefaultConfig, project: { name: '' } };
-  expect(() => mergeConfigs(DefaultConfig, DefaultConfig, invalid, {}, {})).toThrow();
-});
-
-it('rejects with correct error type', async () => {
-  await expect(loadConfig({ cliConfig: { review: { severity: 'invalid' } } }))
-    .rejects.toThrow('Invalid octate.yaml');
-});
-```
-
-**Type Testing (compile-time):**
-```typescript
-it('has correct LogLevel type', () => {
-  const levels: LogLevel[] = ['debug', 'info', 'warn', 'error', 'fatal', 'trace'];
-  levels.forEach((level) => {
-    const l: LogLevel = level; // Type check - compiles if correct
-    expect(l).toBe(level);
+  afterEach(async () => {
+    process.chdir(originalCwd);
+    await rm(testDir, { recursive: true, force: true });
   });
 });
 ```
 
-**Testing Private Functions:**
-- Not directly tested (implementation detail)
-- Tested via public API that exercises them
-- Comment in test: `// We can't directly test the private function, but we can test via command parsing`
+### 2. Real Tree-sitter WASM Grammars in Tests
+Parser tests load real WebAssembly grammars located in `test-wasm/`:
 
-**Snapshot Testing:** Not currently used
+```typescript
+import { Language, Parser } from 'web-tree-sitter';
+import { resolve } from 'node:path';
 
-**Parameterized Tests:** Not currently used (would use `test.each` or `it.each` if needed)
+let parser: Parser;
+let tsLanguage: Language;
 
-## Test Utilities
-
-**Shared Test Helpers:** None extracted yet (patterns repeated inline)
-
-**Recommended Additions:**
-- `createTempDir()` helper for repeated temp directory setup
-- `createMockRepository()` for consistent repo fixtures
-- `expectValidConfig()` / `expectInvalidConfig()` matchers
-
-## Running Tests in CI
-
-**GitHub Actions / CI:**
-```yaml
-- name: Run tests
-  run: pnpm test
-- name: Upload coverage
-  uses: codecov/codecov-action@v3
-  with:
-    files: ./coverage/lcov.info
+beforeAll(async () => {
+  await Parser.init();
+  const wasmPath = resolve(process.cwd(), 'test-wasm/tree-sitter-typescript.wasm');
+  tsLanguage = await Language.load(wasmPath);
+  parser = new Parser();
+  parser.setLanguage(tsLanguage);
+});
 ```
 
-**Pre-commit (Husky):**
-```bash
-# .husky/pre-commit
-pnpm lint && pnpm test
+### 3. Graceful Degradation Testing for Subprocess Diagnostics
+Tests explicitly verify that external tool failures (non-zero exit codes, tool missing, stderr outputs) degrade gracefully by logging a warning and returning empty results rather than throwing unhandled exceptions:
+
+```typescript
+it('handles tool failure gracefully without throwing', async () => {
+  jest.spyOn(subprocess, 'spawnWithSignal').mockRejectedValueOnce(
+    new subprocess.SubprocessError('Tool crashed', 1, '', 'Syntax error')
+  );
+
+  const diagnostics = await runDiagnostics(['file.ts'], repoRoot, ['tsc']);
+  expect(diagnostics.get('tsc')).toEqual([]);
+});
 ```
+
+### 4. AbortSignal and Cancellation Propagation
+Subprocesses and pipeline tasks are tested against `AbortSignal` cancellation:
+
+```typescript
+it('terminates subprocesses when signal is aborted', async () => {
+  const controller = new CancellationController();
+  const promise = orchestrator.analyze(files, { signal: controller.signal });
+  controller.abort();
+  await expect(promise).rejects.toThrow();
+});
+```
+
+### 5. Mocking Policy
+- **What is mocked:**
+  - Subprocess execution (`spawnWithSignal`, `which`) for linters not guaranteed to exist on CI/dev machines
+  - External network calls (e.g., NVIDIA API connectivity check)
+  - Time/delays in race-condition tests
+- **What is NOT mocked:**
+  - Tree-sitter AST parser (runs real WASM in tests)
+  - File system operations (uses real temp directories in `tmpdir`)
+  - Git operations (uses real local repositories created via `isomorphic-git.init`)
+  - Zod schema validation (runs real schema parsing)
 
 ---
 
-*Testing analysis: 2026-09-08*
+*Testing patterns analysis: 2026-09-10*
+*Update when adding new test suites or testing conventions*

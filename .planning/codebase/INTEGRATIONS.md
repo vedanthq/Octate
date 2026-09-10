@@ -1,98 +1,104 @@
 # External Integrations
 
-**Analysis Date:** 2026-09-08
+**Analysis Date:** 2026-09-10
 
 ## APIs & External Services
 
 **AI Model Inference:**
 - **NVIDIA API** - Nemotron 3 Ultra 550B-A55B model
-  - Endpoint: `https://integrate.api.nvidia.com/v1` (OpenAI-compatible chat completions)
-  - Model ID: `nvidia/nemotron-3-ultra-550b-a55b` (confirmed available via `/v1/models`)
-  - SDK/Client: Native `fetch` + `AbortController` (no SDK dependency)
+  - Endpoint: `https://integrate.api.nvidia.com/v1/chat/completions` (OpenAI-compatible)
+  - Model ID: `nvidia/nemotron-3-ultra-550b-a55b`
+  - SDK/Client: Native Node.js `fetch` + `AbortController` (zero external SDK dependency)
   - Auth: Bearer token via `NVIDIA_API_KEY` environment variable
-  - Implementation: `src/commands/doctor.ts:checkNvidiaConnectivity()` (connectivity check only)
-  - Phase 4: LocalNvidiaProvider and HostedProvider will implement `ReviewModel` interface (`src/model/abstraction.ts`)
+  - Health & Connectivity: Verified via `octate doctor` (`src/commands/doctor.ts:checkNvidiaConnectivity()`)
+  - Integration Boundary: `ReviewModel` abstraction (`src/model/abstraction.ts`), with planned providers `LocalNvidiaProvider` and `HostedProvider`
+
+**Language Parser WebAssembly Grammars:**
+- **Tree-sitter WASM Grammars** - Language grammar distribution
+  - Runtime: `web-tree-sitter`
+  - Binaries: `test-wasm/tree-sitter-typescript.wasm`, `test-wasm/tree-sitter-python.wasm`
+  - Loader: `src/analysis/parser/languages.ts` & `src/analysis/parser/index.ts`
+
+## Local Static Analysis Subprocesses
+
+Octate executes local command-line linters, static analyzers, and test runners in the developer's repository to collect deterministic ground-truth diagnostics before AI reasoning:
+
+| Tool | Language | Detection Trigger | Subprocess Command | Output Format | Normalization Handler |
+|---|---|---|---|---|---|
+| `tsc` | TypeScript/JS | `tsconfig.json` / PATH | `npx tsc --noEmit --pretty false` | Text lines (file(line,col): error TS...) | `src/analysis/diagnostics/severity.ts` |
+| `biome` | TS/JS | `biome.json` / PATH | `npx biome check --formatter=json` | JSON diagnostic array | `src/analysis/diagnostics/severity.ts` |
+| `ruff` | Python | `ruff.toml` / PATH | `ruff check --output-format=json .` | JSON array of violation objects | `src/analysis/diagnostics/severity.ts` |
+| `mypy` | Python | `pyproject.toml` / PATH | `mypy --show-error-codes --no-error-summary .` | Text lines with error codes | `src/analysis/diagnostics/severity.ts` |
+| `pyright` | Python | `pyrightconfig.json` / PATH | `pyright --outputjson` | JSON with `generalDiagnostics` | `src/analysis/diagnostics/severity.ts` |
+| `bandit` | Python | `pyproject.toml` / PATH | `bandit -f json -r .` | JSON with `results` array | `src/analysis/diagnostics/severity.ts` |
+| `pytest` | Python | `pyproject.toml` / PATH | `pytest --collect-only -q` | Pytest session output | `src/analysis/diagnostics/severity.ts` |
+
+**Subprocess Execution Protocol:**
+- Managed by `src/cancellation/subprocess.ts:spawnWithSignal()`
+- Bounded concurrency: Executed via `PromisePool` with a concurrency limit of 3 (`src/analysis/diagnostics/index.ts`)
+- Graceful degradation: Failed tool executions log warnings and return empty diagnostic sets without interrupting the overall review pipeline
+- Cancellation: Subprocess trees are terminated with `SIGTERM` followed by `SIGKILL` on AbortSignal
 
 ## Data Storage
 
 **Databases:**
-- None. No database dependencies in `package.json`.
+- None. Octate has no database requirements.
 
 **File Storage:**
-- **Local filesystem only** - Cache and indexes stored at `~/.local/share/octate/{project-hash}/`
-  - Structure: `indexes/`, `cache/`, `findings/`, `logs/` (`src/cache/identity.ts:CachePaths`)
-  - Project identity: SHA256(repo-root-path + git-remote-url) truncated to 16 chars
-  - Fallback: Absolute path + platform + device/inode if no git remote
-  - Global cache: `~/.local/share/octate/global/` (`src/cache/identity.ts:getGlobalCacheDir()`)
+- **Local filesystem only** - Content-addressable storage at `~/.local/share/octate/{project-hash}/`
+  - Subdirectories: `indexes/`, `cache/`, `findings/`, `logs/`
+  - Project Identity: Derived via SHA256(repoRoot + remoteOriginUrl) truncated to 16 hex characters (`src/cache/identity.ts`)
+  - Global Cache: `~/.local/share/octate/global/`
 
-**Caching:**
-- **Custom LRU cache** - `src/cache/` module (store, pool, lru, keys, identity)
-  - `CacheStore` interface with `get`/`set`/`delete`/`has`/`keys`/`clear`/`size` (`src/cache/store.ts`)
-  - `LRUCache` implementation with TTL support (`src/cache/lru.ts`)
-  - `CachePool` for namespaced caches (`src/cache/pool.ts`)
-  - Content hashing: SHA256 via `node:crypto` for incremental indexing keys
+**Caching Subsystem:**
+- **Cache Store**: Atomic file writes, LRU eviction (`src/cache/store.ts`)
+- **Cache Keys**:
+  - Analysis Cache Key: `contentHash:filePath:parserVersion:language:configHash`
+  - Diagnostic Collection Key: Combined file hashes + tool list + config version (`diagnosticsKey`)
+  - Tool Result Key: Tool name + tool version + file hashes + config version (`toolResultKey`)
+  - Tool Version Caching: In-memory cache for `--version` command outputs (`getToolVersion`)
+  - Config Version Hashing: SHA256 over repository configs (`tsconfig.json`, `biome.json`, `ruff.toml`, etc.)
 
 ## Authentication & Identity
 
-**Auth Provider:**
-- **None (API key only)** - NVIDIA API uses static `NVIDIA_API_KEY` environment variable
-- No OAuth, no JWT, no session management
-- No user accounts, no per-seat pricing (local execution model)
-- Secrets server-side only for hosted inference (not implemented yet)
+**Authentication:**
+- Static environment variable: `NVIDIA_API_KEY`
+- No user credentials, accounts, or OAuth tokens stored on disk
+- No per-seat billing or authentication servers
+
+**Security Redaction:**
+- Structured logging automatically redacts: `NVIDIA_API_KEY`, `apiKey`, `token`, `password`, `secret`, `authorization`, `x-api-key`, `apikey`
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None. No Sentry, Datadog, or similar integrations.
+- None (zero telemetry, zero phone-home behavior).
 
-**Logs:**
-- **Pino** - Structured JSON logging (`src/logging/index.ts`)
-  - Child loggers per module: `createLogger('module:name')`
-  - Redaction paths: `NVIDIA_API_KEY`, `apiKey`, `token`, `password`, `secret`, `authorization`, `x-api-key`, `apikey`
-  - Development: `pino-pretty` with colorized output, timestamp translation
-  - Production: JSON to stdout
-  - Levels: trace, debug, info, warn, error, fatal
-  - Configurable via `LOG_LEVEL` env var or `--log-level` CLI flag
+**Logging:**
+- Pino structured JSON logging (`src/logging/index.ts`)
+- Child loggers created per module (`createLogger('analysis/orchestrator')`, etc.)
+- Human-readable colorized output in development via `pino-pretty`
+- Raw structured JSON output in production/automation mode
 
 ## CI/CD & Deployment
 
-**Hosting:**
-- **NPM package** - Published as CLI tool (`bin.octate` -> `dist/cli.js`)
-- No hosted service, no server component
-- Zero per-seat pricing (local execution)
-
-**CI Pipeline:**
-- None configured in repository (no `.github/workflows/`, no `.gitlab-ci.yml`, no Jenkinsfile)
-- Local commands: `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm check`
+**Packaging & Distribution:**
+- Node.js npm package with binary executable entry `dist/cli.js`
+- Local execution model: Repository files never leave the local environment for analysis
+- Automation outputs: Supported formats include `--json` and `--sarif` for GitHub Actions and CI pipelines
 
 ## Environment Configuration
 
-**Required env vars:**
-- `NVIDIA_API_KEY` - For NVIDIA API access (warns if missing in `doctor` check)
+**Required Environment Variables:**
+- `NVIDIA_API_KEY` - API key for model reasoning (checked by `octate doctor`)
 
-**Optional env vars:**
-- `LOG_LEVEL` - Override log level
-- `NODE_ENV` - `production` disables pretty printing
-- `XDG_CONFIG_HOME` - Override global config directory
-- `HOME` / `USERPROFILE` - Home directory detection for cache
-
-**Secrets location:**
-- `NVIDIA_API_KEY` in environment (never in config files)
-- Pino redacts `NVIDIA_API_KEY` from logs automatically
-- No `.env` files committed (`.gitignore` excludes `*.log`, `.octate/`, `~/.local/share/octate/`)
-
-## Webhooks & Callbacks
-
-**Incoming:**
-- None. CLI tool only, no HTTP server.
-
-**Outgoing:**
-- **NVIDIA API** - HTTPS POST to `https://integrate.api.nvidia.com/v1/chat/completions` (Phase 4)
-  - Request: OpenAI-compatible chat completions format
-  - Response: Structured findings validated via Zod schema
-  - Timeout: 10s (configurable via `ModelProviderConfig.timeout`)
-  - Retries: Configurable via `ModelProviderConfig.maxRetries`
+**Optional Environment Variables:**
+- `LOG_LEVEL` - Log level (`debug`, `info`, `warn`, `error`)
+- `NODE_ENV` - Set to `production` for raw JSON logs
+- `XDG_CONFIG_HOME` - Override path for user config (`~/.config`)
+- `HOME` / `USERPROFILE` - Base directory for local cache store
 
 ---
 
-*Integration audit: 2026-09-08*
+*Integration audit: 2026-09-10*
+*Update when adding or modifying external service or subprocess integrations*
