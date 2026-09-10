@@ -109,9 +109,13 @@ Plans:
   3. Security Reviewer identifies: authentication/authorization flaws, input validation gaps, injection (SQL/command/SSRF), path traversal, privilege escalation, secret exposure, cryptographic misuse, unsafe deserialization, sensitive data exposure — findings require strong evidence
   4. Critic stage filters each candidate finding: verifies truth against repository evidence, proves evidence supports claim, checks intentionality, handles duplicates, validates impact meaningfulness, justifies severity, confirms actionability, applies senior-engineer judgment — weak findings discarded
   5. Deduplication merges findings using file/range, issue signature, symbol, evidence overlap, semantic similarity — keeps strongest explanation with merged evidence
-  6. Ranking orders findings by composite score: severity × confidence × evidence strength × blast radius × security impact × regression probability × actionability — most important finding appears first
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: no
+
+Plans:
+- [ ] 05-01-PLAN.md — Domain Models, Heuristic Triggers & Staged Review DAG (REV-01)
+- [ ] 05-02-PLAN.md — Deduplication Engine & Two-Stage Critic Quality Gate (REV-02, REV-03)
+- [ ] 05-03-PLAN.md — Composite Ranking, Engine Orchestrator & CLI Integration (REV-04, REV-01..04)
 
 ### Phase 6: Application Layer
 **Goal**: Full review pipeline executes from CLI command to ReviewResult with progress streaming, cancellation, and exit codes.
