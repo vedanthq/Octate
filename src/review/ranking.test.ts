@@ -76,13 +76,17 @@ describe('ranking', () => {
     it('calculates base scores by count', () => {
       // 1 item base = 40. Since span <= 10, specificity bonus = +5 => 45
       const f1 = createMockFinding({
-        evidence: [{ file: 'src/user.ts', startLine: 1, endLine: 5, relationship: 'ref', explanation: '' }],
+        evidence: [
+          { file: 'src/user.ts', startLine: 1, endLine: 5, relationship: 'ref', explanation: '' },
+        ],
       });
       expect(calculateEvidenceStrength(f1)).toBe(45);
 
       // 1 item with span > 10 (no specificity bonus) => 40
       const f1Wide = createMockFinding({
-        evidence: [{ file: 'src/user.ts', startLine: 1, endLine: 25, relationship: 'ref', explanation: '' }],
+        evidence: [
+          { file: 'src/user.ts', startLine: 1, endLine: 25, relationship: 'ref', explanation: '' },
+        ],
       });
       expect(calculateEvidenceStrength(f1Wide)).toBe(40);
 
@@ -100,7 +104,13 @@ describe('ranking', () => {
         evidence: [
           { file: 'src/user.ts', startLine: 1, endLine: 25, relationship: 'ref', explanation: '' },
           { file: 'src/user.ts', startLine: 30, endLine: 60, relationship: 'ref', explanation: '' },
-          { file: 'src/user.ts', startLine: 70, endLine: 100, relationship: 'ref', explanation: '' },
+          {
+            file: 'src/user.ts',
+            startLine: 70,
+            endLine: 100,
+            relationship: 'ref',
+            explanation: '',
+          },
         ],
       });
       expect(calculateEvidenceStrength(f3)).toBe(90);
@@ -189,11 +199,21 @@ describe('ranking', () => {
 
   describe('calculateSecurityImpact', () => {
     it('returns exact scores for security category', () => {
-      expect(calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'critical' }))).toBe(100);
-      expect(calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'high' }))).toBe(85);
-      expect(calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'medium' }))).toBe(60);
-      expect(calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'low' }))).toBe(40);
-      expect(calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'info' }))).toBe(20);
+      expect(
+        calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'critical' }))
+      ).toBe(100);
+      expect(
+        calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'high' }))
+      ).toBe(85);
+      expect(
+        calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'medium' }))
+      ).toBe(60);
+      expect(
+        calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'low' }))
+      ).toBe(40);
+      expect(
+        calculateSecurityImpact(createMockFinding({ category: 'security', severity: 'info' }))
+      ).toBe(20);
     });
 
     it('returns 15 for non-security category matching security keywords', () => {

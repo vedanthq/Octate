@@ -285,8 +285,7 @@ export async function executeCriticStage(params: CriticParams): Promise<CriticRe
         throw retryError;
       }
 
-      const errorMsg =
-        retryError instanceof Error ? retryError.message : String(retryError);
+      const errorMsg = retryError instanceof Error ? retryError.message : String(retryError);
       log.error({ retryError }, 'Critic quality gate failed after retry');
 
       // Fail-fast with ModelError (exit code 4) to ensure unverified findings never reach the user

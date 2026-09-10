@@ -15,12 +15,7 @@ import path from 'node:path';
 import type { ReferenceGraph } from '../intelligence/graph/reference.js';
 import type { SymbolIndex } from '../intelligence/index/symbol-index.js';
 import type { ModelFinding } from '../model/types.js';
-import type {
-  FindingCategory,
-  RankedFinding,
-  ReviewSeverity,
-  ScoreBreakdown,
-} from './types.js';
+import type { FindingCategory, RankedFinding, ReviewSeverity, ScoreBreakdown } from './types.js';
 
 const SEVERITY_SCORES: Record<ReviewSeverity, number> = {
   critical: 100,
@@ -155,9 +150,7 @@ export function calculateBlastRadius(
 
   // 3. Query file importers via incoming edges with kind 'imports' or 'imported_by'
   const incoming = referenceGraph.getIncoming(normFile);
-  const importers = incoming.filter(
-    (e) => e.kind === 'imports' || e.kind === 'imported_by'
-  );
+  const importers = incoming.filter((e) => e.kind === 'imports' || e.kind === 'imported_by');
   const importersCount = importers.length;
 
   const totalDependents = callersCount + importersCount;
@@ -202,10 +195,7 @@ export function calculateSecurityImpact(finding: ModelFinding): number {
 /**
  * Calculates regression probability score based on defect category and coupling (0-100).
  */
-export function calculateRegressionProbability(
-  finding: ModelFinding,
-  blastRadius: number
-): number {
+export function calculateRegressionProbability(finding: ModelFinding, blastRadius: number): number {
   const base = CATEGORY_REGRESSION_BASE[finding.category] ?? 30;
   const couplingBonus = blastRadius >= 50 ? 15 : 0;
   return Math.min(100, Math.max(0, base + couplingBonus));
@@ -229,11 +219,9 @@ export function calculateCompositeScore(
   const evidenceStrengthScore = calculateEvidenceStrength(finding);
   const blastRadiusScore = calculateBlastRadius(finding, referenceGraph, symbolIndex);
   const securityImpactScore = calculateSecurityImpact(finding);
-  const regressionProbabilityScore = calculateRegressionProbability(
-    finding,
-    blastRadiusScore
-  );
+  const regressionProbabilityScore = calculateRegressionProbability(finding, blastRadiusScore);
 
+  // biome-ignore format: preserve exact decimal notation
   const rawScore =
     0.30 * severityScore +
     0.20 * confidenceScore +
@@ -307,9 +295,7 @@ export function rankAndTruncateFindings(params: RankingParams): RankedFinding[] 
 
   // 1. Filter out findings below minSeverity
   const minLevel = minSeverity ? SEVERITY_LEVELS[minSeverity] : 1;
-  const eligibleFindings = findings.filter(
-    (f) => (SEVERITY_LEVELS[f.severity] ?? 1) >= minLevel
-  );
+  const eligibleFindings = findings.filter((f) => (SEVERITY_LEVELS[f.severity] ?? 1) >= minLevel);
 
   // 2. Score and enrich findings
   const rankedList: RankedFinding[] = eligibleFindings.map((f) => {

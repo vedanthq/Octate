@@ -119,10 +119,7 @@ export class ReviewEngine {
 
     // Stage 2: Pre-Critic Deduplication (Syntactic clustering)
     input.signal?.throwIfAborted();
-    const preCriticFindings = preCriticDeduplicate(
-      dagResult.findings,
-      input.symbolIndex
-    );
+    const preCriticFindings = preCriticDeduplicate(dagResult.findings, input.symbolIndex);
     const preCriticCount = preCriticFindings.length;
 
     log.info(
@@ -156,10 +153,7 @@ export class ReviewEngine {
 
     // Stage 4: Post-Critic Multi-Factor Consolidation
     input.signal?.throwIfAborted();
-    const postCriticFindings = postCriticConsolidate(
-      criticResult.findings,
-      input.symbolIndex
-    );
+    const postCriticFindings = postCriticConsolidate(criticResult.findings, input.symbolIndex);
     const postCriticCount = postCriticFindings.length;
 
     log.info(
@@ -230,10 +224,8 @@ export class ReviewEngine {
     const promptTokens =
       (dagResult.usage.promptTokens ?? 0) + (criticResult.usage.promptTokens ?? 0);
     const completionTokens =
-      (dagResult.usage.completionTokens ?? 0) +
-      (criticResult.usage.completionTokens ?? 0);
-    const totalTokens =
-      (dagResult.usage.totalTokens ?? 0) + (criticResult.usage.totalTokens ?? 0);
+      (dagResult.usage.completionTokens ?? 0) + (criticResult.usage.completionTokens ?? 0);
+    const totalTokens = (dagResult.usage.totalTokens ?? 0) + (criticResult.usage.totalTokens ?? 0);
 
     const metadata: ExecutionMetadata = {
       scopeType: input.scopeMetadata?.scopeType ?? 'working-tree',

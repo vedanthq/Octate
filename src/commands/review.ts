@@ -22,11 +22,7 @@ import { createLogger } from '../logging/index.js';
 import { LocalNvidiaProvider, type ReviewModelInterface } from '../model/index.js';
 import { findGitRoot } from '../repository/discovery.js';
 import { parseRange, resolveScope, type ScopeOptions } from '../repository/scope.js';
-import {
-  createReviewEngine,
-  type RankedFinding,
-  type ReviewResult,
-} from '../review/index.js';
+import { createReviewEngine, type RankedFinding, type ReviewResult } from '../review/index.js';
 
 const logger = createLogger('commands:review');
 

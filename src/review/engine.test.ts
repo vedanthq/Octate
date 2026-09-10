@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
 import { ReferenceGraph } from '../intelligence/graph/reference.js';
 import { SymbolIndex } from '../intelligence/index/symbol-index.js';
-import {
-  createTestContext,
-  createTestFinding,
-  MockReviewModel,
-} from './__tests__/mocks.js';
+import { createTestContext, createTestFinding, MockReviewModel } from './__tests__/mocks.js';
 import { createReviewEngine, ReviewEngine } from './engine.js';
 import type { ReviewEngineInput } from './types.js';
 
@@ -185,7 +181,9 @@ describe('ReviewEngine', () => {
     );
 
     expect(result.metadata.warnings.length).toBeGreaterThan(0);
-    expect(result.metadata.warnings.some((w) => w.includes('semantic') && w.includes('timeout'))).toBe(true);
+    expect(
+      result.metadata.warnings.some((w) => w.includes('semantic') && w.includes('timeout'))
+    ).toBe(true);
     expect(result.findings.length).toBe(1); // Structural finding preserved
   });
 

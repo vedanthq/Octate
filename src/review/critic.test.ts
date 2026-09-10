@@ -6,16 +6,8 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { ModelError, ValidationError } from '../errors/index.js';
 import type { ReviewContext } from '../intelligence/types.js';
 import type { ModelFinding, ModelRequest, ModelResponse } from '../model/types.js';
-import {
-  createTestContext,
-  createTestFinding,
-  MockReviewModel,
-} from './__tests__/mocks.js';
-import {
-  executeCriticStage,
-  filterDeterministicHardFloor,
-  isActionableFix,
-} from './critic.js';
+import { createTestContext, createTestFinding, MockReviewModel } from './__tests__/mocks.js';
+import { executeCriticStage, filterDeterministicHardFloor, isActionableFix } from './critic.js';
 
 describe('critic', () => {
   let mockModel: MockReviewModel;
@@ -42,9 +34,7 @@ describe('critic', () => {
 
     it('accepts concrete code remediation >= 15 characters', () => {
       expect(isActionableFix('if (!user) { return null; }')).toBe(true);
-      expect(
-        isActionableFix('db.query(sql, [userId]) to prevent SQL injection')
-      ).toBe(true);
+      expect(isActionableFix('db.query(sql, [userId]) to prevent SQL injection')).toBe(true);
     });
   });
 
