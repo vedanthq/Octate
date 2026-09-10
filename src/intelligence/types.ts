@@ -3,6 +3,7 @@
  */
 
 import type { Symbol as AnalysisSymbol } from '../analysis/types.js';
+import type { ContextItem } from '../model/types.js';
 
 export interface ImportStatement {
   sourceFile: string;
@@ -96,6 +97,7 @@ export interface ReviewContext {
   contextSnippets: string[];
   totalTokens: number;
   metrics: ReviewContextMetrics;
+  items?: ContextItem[] | undefined;
 }
 
 export interface SerializedGraph {

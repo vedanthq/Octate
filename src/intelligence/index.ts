@@ -3,6 +3,23 @@
  */
 
 export {
+  estimateTokens,
+  type TieredBudget,
+  TokenBudgetManager,
+} from './context/budget.js';
+export {
+  CandidateCollector,
+  type CandidateCollectParams,
+  scoreCandidate,
+} from './context/candidates.js';
+export {
+  type BuildContextOptions,
+  ContextEngine,
+  type ContextEngineOptions,
+  createContextEngine,
+} from './context/engine.js';
+export { formatNumberedLines, windowSnippet } from './context/windowing.js';
+export {
   createDependencyGraph,
   DependencyGraph,
   type FileDependencies,
