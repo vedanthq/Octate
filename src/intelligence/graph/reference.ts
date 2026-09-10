@@ -100,6 +100,13 @@ export class ReferenceGraph {
   }
 
   /**
+   * Gets direct incoming edges for a node (symbol or file).
+   */
+  public getIncoming(nodeId: string): GraphEdge[] {
+    return this.incoming.get(path.normalize(nodeId)) ?? this.incoming.get(nodeId) ?? [];
+  }
+
+  /**
    * Gets direct 1-hop callees for a symbol.
    */
   public getCallees(symbolId: string): GraphEdge[] {
