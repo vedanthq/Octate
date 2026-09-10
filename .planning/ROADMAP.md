@@ -91,9 +91,13 @@ Plans:
   2. Versioned prompt definitions exist for `reviewer.structural.v1`, `reviewer.semantic.v1`, `reviewer.security.v1`, `critic.v1`
   3. Model output is validated against compiled Zod schema: findings with severity (critical/high/medium/low/info), category (correctness/security/performance/architecture/reliability/maintainability/compatibility/testing), title, message, file, startLine, endLine, confidence (0.0–1.0), evidence[], relatedFiles[], relatedSymbols[], impact, suggestedFix, reviewer, metadata — invalid responses rejected and retried with corrected prompt
   4. Prompt architecture explicitly separates trusted (system policy, Octate rules, review task) from untrusted (source, comments, README, commit messages, repo config, generated files) content — repository content never appears in instruction areas
-  5. NVIDIA API key never appears in CLI logs, process environment (for hosted path), or client bundles; hosted architecture uses CLI → Octate API (Vercel) → NVIDIA with key only in server-side Vercel secrets
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: no
+
+Plans:
+- [ ] 04-01-PLAN.md — Prompt Templates & Lightweight Template Rendering Engine (MODEL-04)
+- [ ] 04-02-PLAN.md — Zod Schema Compilation, Robust JSON Extraction & Repository Grounding (MODEL-03)
+- [ ] 04-03-PLAN.md — NVIDIA Nemotron Provider, Concurrency Limiting, Retries & Cancellation (MODEL-01, MODEL-02)
 
 ### Phase 5: Review Engine
 **Goal**: Review DAG produces high-signal, evidence-backed, ranked findings from context.

@@ -4,14 +4,14 @@ milestone: v2.1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: Model Provider
-status: ready_to_plan
-stopped_at: Phase 4 context gathered
-resume_file: .planning/phases/04-model-provider/04-CONTEXT.md
-last_updated: "2026-09-10T16:35:00.000Z"
+status: ready_to_execute
+stopped_at: Phase 4 planning complete
+resume_file: .planning/phases/04-model-provider/04-01-PLAN.md
+last_updated: "2026-09-10T17:00:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 13
+  total_plans: 16
   completed_plans: 13
   percent: 38
 ---
@@ -20,8 +20,8 @@ progress:
 
 **Milestone:** 1 — Terminal-native AI Code Review MVP
 **Phase:** 4 — Model Provider
-**Plan:** Context gathered
-**Status:** Ready to plan ✓
+**Plan:** 3 plans created
+**Status:** Ready to execute ✓
 **Last Updated:** 2026-09-10
 
 ---
@@ -55,13 +55,13 @@ Repository Layer (Phase 1) ✓
 ## Current Position
 
 ```
-Phase: 04 (model-provider) — CONTEXT GATHERED ✓
-Plan: Not yet planned
-Status: Ready to plan
+Phase: 04 (model-provider) — PLANNED ✓
+Plan: 3 plans created
+Status: Ready to execute
 Progress: [████░░░░░░] 38%
 ```
 
-**Next Action:** Plan Phase 4 (Model Provider) → `/gsd-plan-phase 4`
+**Next Action:** Execute Phase 4 (Model Provider) → `/gsd-execute-phase 4`
 
 ---
 
@@ -138,15 +138,15 @@ None
 
 ## Session Continuity
 
-**Last session:** 2026-09-10T16:35:00.000Z
-**Stopped at:** Phase 4 context gathered
-**Resume file:** `.planning/phases/04-model-provider/04-CONTEXT.md`
+**Last session:** 2026-09-10T17:00:00.000Z
+**Stopped at:** Phase 4 planning complete
+**Resume file:** `.planning/phases/04-model-provider/04-01-PLAN.md`
 
-**Previous Session:** Executed Phase 3 (Intelligence Layer) — SymbolIndex, PathResolver, ReferenceGraph, DependencyGraph, ContextEngine, and serializePromptContext with review command pipeline wiring.
+**Previous Session:** Gathered Phase 4 context — NVIDIA Nemotron provider, retry/rate-limit strategy, Zod schema validation & 2-turn repair loop, markdown prompt templates, and concurrency limiting.
 
-**Current Session:** Gathered Phase 4 context — NVIDIA Nemotron provider, retry/rate-limit strategy, Zod schema validation & 2-turn repair loop, markdown prompt templates, and concurrency limiting.
+**Current Session:** Researched and planned Phase 4 (Model Provider) — 3 plans created (prompts & templates, Zod schema & grounding, NVIDIA provider & resilience).
 
-**Next Session:** `/gsd-plan-phase 4` — plan Model Provider (Phase 04)
+**Next Session:** `/gsd-execute-phase 4` — execute Model Provider (Phase 04)
 
 ---
 
@@ -180,6 +180,10 @@ None
 | 03-04 SUMMARY | `.planning/phases/03-intelligence-layer/03-04-SUMMARY.md` | ✓ Created |
 | 04-CONTEXT | `.planning/phases/04-model-provider/04-CONTEXT.md` | ✓ Created |
 | 04-DISCUSSION-LOG | `.planning/phases/04-model-provider/04-DISCUSSION-LOG.md` | ✓ Created |
+| 04-RESEARCH | `.planning/phases/04-model-provider/04-RESEARCH.md` | ✓ Created |
+| 04-01 PLAN | `.planning/phases/04-model-provider/04-01-PLAN.md` | ✓ Created |
+| 04-02 PLAN | `.planning/phases/04-model-provider/04-02-PLAN.md` | ✓ Created |
+| 04-03 PLAN | `.planning/phases/04-model-provider/04-03-PLAN.md` | ✓ Created |
 
 ---
 
