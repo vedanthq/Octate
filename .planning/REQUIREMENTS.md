@@ -40,10 +40,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Model (MODEL)
 
-- [ ] **MODEL-01**: NVIDIA Nemotron 3 Ultra 550B-A55B provider with API auth, HTTP, request/response serialization, timeout, retry, rate-limit handling, structured errors, cancellation, usage metadata
+- [x] **MODEL-01**: NVIDIA Nemotron 3 Ultra 550B-A55B provider with API auth, HTTP, request/response serialization, timeout, retry, rate-limit handling, structured errors, cancellation, usage metadata
 - [x] **MODEL-02**: Model abstraction interface (`ReviewModel.generate(request): Promise<ModelResponse>`) — core depends on abstraction, not NVIDIA specifics
 - [x] **MODEL-03**: Schema-validated structured output (findings with severity, category, title, message, file, line ranges, confidence, evidence, suggested fix) — validate schema, file paths, line ranges, severity, confidence, evidence, categories
-- [ ] **MODEL-04**: Prompt injection protection — trusted (system policy, Octate rules, review task) vs untrusted (source, comments, README, commit messages, repo config, generated files) separation in prompt architecture
+- [x] **MODEL-04**: Prompt injection protection — trusted (system policy, Octate rules, review task) vs untrusted (source, comments, README, commit messages, repo config, generated files) separation in prompt architecture
 
 ### TUI (TUI)
 
@@ -148,10 +148,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REV-02 | Phase 5 | Pending |
 | REV-03 | Phase 5 | Pending |
 | REV-04 | Phase 5 | Pending |
-| MODEL-01 | Phase 4 | Pending |
+| MODEL-01 | Phase 4 | Complete |
 | MODEL-02 | Phase 1 | Complete |
 | MODEL-03 | Phase 4 | Complete |
-| MODEL-04 | Phase 4 | Pending |
+| MODEL-04 | Phase 4 | Complete |
 | TUI-01 | Phase 7 | Pending |
 | TUI-02 | Phase 7 | Pending |
 | TUI-03 | Phase 7 | Pending |
