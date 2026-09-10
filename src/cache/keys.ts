@@ -165,7 +165,7 @@ export async function getToolVersion(toolName: string, repoRoot: string): Promis
 
   try {
     const result = await spawnWithSignal(spec.cmd, spec.args, { cwd: repoRoot });
-    const version = result.stdout.trim().split('\n')[0];
+    const version = result.stdout.trim().split('\n')[0] ?? 'unknown';
     toolVersionCache.set(toolName, version);
     return version;
   } catch {

@@ -3,7 +3,7 @@
  */
 
 import { beforeAll, describe, expect, it } from '@jest/globals';
-import * as webTreeSitter from 'web-tree-sitter';
+import type * as webTreeSitter from 'web-tree-sitter';
 import { initParser, parseFile } from './index.js';
 
 describe('Tree-sitter Parser', () => {

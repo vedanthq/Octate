@@ -4,7 +4,7 @@ packages:
 allowBuilds:
   '@parcel/watcher': set this to true or false
   esbuild: set this to true or false
-  tree-sitter-javascript: set this to true or false
-  tree-sitter-python: set this to true or false
-  tree-sitter-typescript: set this to true or false
+  tree-sitter-javascript: true
+  tree-sitter-python: true
+  tree-sitter-typescript: true
   unrs-resolver: set this to true or false

@@ -112,11 +112,13 @@ export interface ContextItem {
 export interface Diagnostic {
   file: string;
   startLine: number;
+  startColumn: number;
   endLine: number;
-  severity: 'error' | 'warning' | 'info';
+  endColumn: number;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   message: string;
   source: string;
-  code?: string;
+  rule?: string | undefined;
 }
 
 /**

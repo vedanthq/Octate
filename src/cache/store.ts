@@ -6,6 +6,8 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rmdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import type { Diagnostic } from '../model/types.js';
+import type { DiagnosticCollection } from '../analysis/diagnostics/index.js';
 
 /**
  * Cache entry metadata.
@@ -288,6 +290,54 @@ export class CacheStore {
     const hash = createHash('sha256').update(key).digest('hex');
     const prefix = hash.substring(0, 2);
     return resolve(this.rootDir, prefix, hash);
+  }
+
+  // ===== Diagnostics Cache Methods =====
+
+  /**
+   * Gets cached diagnostic collection.
+   */
+  async getDiagnostics(key: string): Promise<DiagnosticCollection | null> {
+    const entry = await this.get<DiagnosticCollection>(`analysis/diagnostics/${key}`);
+    return entry?.value ?? null;
+  }
+
+  /**
+   * Sets cached diagnostic collection.
+   */
+  async setDiagnostics(key: string, value: DiagnosticCollection): Promise<void> {
+    return this.set(`analysis/diagnostics/${key}`, value);
+  }
+
+  /**
+   * Checks if diagnostic collection exists in cache.
+   */
+  async hasDiagnostics(key: string): Promise<boolean> {
+    return this.has(`analysis/diagnostics/${key}`);
+  }
+
+  // ===== Tool Result Cache Methods =====
+
+  /**
+   * Gets cached tool result diagnostics.
+   */
+  async getToolResult(key: string): Promise<Diagnostic[] | null> {
+    const entry = await this.get<Diagnostic[]>(`analysis/tool-results/${key}`);
+    return entry?.value ?? null;
+  }
+
+  /**
+   * Sets cached tool result diagnostics.
+   */
+  async setToolResult(key: string, value: Diagnostic[]): Promise<void> {
+    return this.set(`analysis/tool-results/${key}`, value);
+  }
+
+  /**
+   * Checks if tool result exists in cache.
+   */
+  async hasToolResult(key: string): Promise<boolean> {
+    return this.has(`analysis/tool-results/${key}`);
   }
 }
 
