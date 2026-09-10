@@ -1,9 +1,9 @@
 /**
  * ReviewModel abstraction interface.
  * Core depends on this interface, not provider implementations.
- * Phase 4 will implement LocalNvidiaProvider and HostedProvider.
  */
 
+import { LocalNvidiaProvider } from './providers/nvidia.js';
 import type {
   ModelProviderConfig,
   ModelRequest,
@@ -11,6 +11,8 @@ import type {
   ProviderType,
   ReviewModel as ReviewModelInterface,
 } from './types.js';
+
+export { LocalNvidiaProvider };
 
 /**
  * ReviewModel interface for AI code review.
@@ -22,23 +24,36 @@ export const defaultReviewModel: ReviewModelInterface = {
   /**
    * Generates a model response for code review.
    *
-   * @param request - Structured request with trusted/untrusted separation
+   * @param _request - Structured request with trusted/untrusted separation
    * @returns Promise resolving to validated model response
    */
-  async generate(request: ModelRequest): Promise<ModelResponse> {
-    throw new Error('ReviewModel.generate() must be implemented by provider');
+  generate(_request: ModelRequest): Promise<ModelResponse> {
+    return Promise.reject(new Error('ReviewModel.generate() must be implemented by provider'));
   },
 };
 
 /**
  * Factory function to create provider instances.
- * Will be implemented in Phase 4.
  */
 export function createModelProvider(
   type: ProviderType,
-  config: ModelProviderConfig
+  config: ModelProviderConfig = { model: 'nvidia/nemotron-3-ultra-550b-a55b' }
 ): ReviewModelInterface {
-  throw new Error(`Provider ${type} not yet implemented (Phase 4)`);
+  if (type === 'nvidia' || type === 'local-nvidia') {
+    return new LocalNvidiaProvider({
+      apiKey: config.apiKey,
+      endpointUrl: config.baseUrl,
+      modelId: config.model,
+      timeoutMs: config.timeout,
+      maxRetries: config.maxRetries,
+    });
+  }
+
+  if (type === 'hosted') {
+    throw new Error('Hosted provider is deferred to future milestone');
+  }
+
+  throw new Error(`Unknown provider type: ${type}`);
 }
 
 /**

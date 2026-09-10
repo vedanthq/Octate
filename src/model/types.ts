@@ -171,4 +171,4 @@ export interface ModelProviderConfig {
 /**
  * Provider type for factory pattern.
  */
-export type ProviderType = 'local-nvidia' | 'hosted';
+export type ProviderType = 'local-nvidia' | 'nvidia' | 'hosted';

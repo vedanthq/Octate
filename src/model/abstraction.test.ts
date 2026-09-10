@@ -3,7 +3,12 @@
  */
 
 import { describe, expect, it } from '@jest/globals';
-import { createModelProvider, isReviewModel, defaultReviewModel } from './abstraction.js';
+import {
+  createModelProvider,
+  defaultReviewModel,
+  isReviewModel,
+  LocalNvidiaProvider,
+} from './abstraction.js';
 import type { ModelFinding, ModelRequest, ModelResponse, ProviderType } from './types.js';
 
 describe('ReviewModel interface', () => {
@@ -33,18 +38,23 @@ describe('ReviewModel interface', () => {
 describe('isReviewModel', () => {
   it('returns true for valid implementation', () => {
     const validImpl = {
-      async generate(_request: ModelRequest): Promise<ModelResponse> {
-        return {
+      generate(_request: ModelRequest): Promise<ModelResponse> {
+        return Promise.resolve({
           findings: [],
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
           model: 'test',
           latencyMs: 0,
-          finishReason: 'stop',
-        };
+          finishReason: 'stop' as const,
+        });
       },
     };
 
     expect(isReviewModel(validImpl)).toBe(true);
+  });
+
+  it('returns true for LocalNvidiaProvider instance', () => {
+    const provider = new LocalNvidiaProvider();
+    expect(isReviewModel(provider)).toBe(true);
   });
 
   it('returns false for invalid implementation', () => {
@@ -55,16 +65,32 @@ describe('isReviewModel', () => {
 });
 
 describe('createModelProvider', () => {
-  it('throws for local-nvidia (not implemented)', () => {
-    expect(() => {
-      createModelProvider('local-nvidia' as ProviderType, { model: 'test' });
-    }).toThrow('not yet implemented');
+  it('creates LocalNvidiaProvider for nvidia type', () => {
+    const provider = createModelProvider('nvidia', {
+      model: 'nvidia/nemotron-3-ultra-550b-a55b',
+    });
+    expect(provider).toBeInstanceOf(LocalNvidiaProvider);
+    expect(isReviewModel(provider)).toBe(true);
   });
 
-  it('throws for hosted (not implemented)', () => {
+  it('creates LocalNvidiaProvider for local-nvidia type', () => {
+    const provider = createModelProvider('local-nvidia', {
+      model: 'nvidia/nemotron-3-ultra-550b-a55b',
+    });
+    expect(provider).toBeInstanceOf(LocalNvidiaProvider);
+    expect(isReviewModel(provider)).toBe(true);
+  });
+
+  it('throws for hosted (deferred)', () => {
     expect(() => {
-      createModelProvider('hosted' as ProviderType, { model: 'test' });
-    }).toThrow('not yet implemented');
+      createModelProvider('hosted', { model: 'test' });
+    }).toThrow('Hosted provider is deferred to future milestone');
+  });
+
+  it('throws for unknown provider type', () => {
+    expect(() => {
+      createModelProvider('unknown' as ProviderType, { model: 'test' });
+    }).toThrow('Unknown provider type: unknown');
   });
 });
 
