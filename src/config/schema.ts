@@ -8,6 +8,7 @@ import { z } from 'zod';
 export const ReviewConfigSchema = z.object({
   severity: z.enum(['critical', 'high', 'medium', 'low', 'info']).default('medium'),
   maxFindings: z.number().int().positive().max(100).default(50),
+  minConfidence: z.number().min(0).max(1).default(0.6),
 });
 
 export const ArchitectureConfigSchema = z
@@ -28,7 +29,11 @@ export const OctateConfigSchema = z
   .object({
     version: z.string().regex(/^\d+\.\d+\.\d+$/),
     project: ProjectConfigSchema,
-    review: ReviewConfigSchema.default({ severity: 'medium', maxFindings: 50 }),
+    review: ReviewConfigSchema.default({
+      severity: 'medium',
+      maxFindings: 50,
+      minConfidence: 0.6,
+    }),
     rules: z.array(z.string()).default([]),
     architecture: ArchitectureConfigSchema.default({ boundaries: [], forbiddenDependencies: [] }),
     ignore: z.array(z.string()).default([]),
@@ -52,6 +57,7 @@ export const DefaultConfig: OctateConfig = {
   review: {
     severity: 'medium',
     maxFindings: 50,
+    minConfidence: 0.6,
   },
   rules: [],
   architecture: {

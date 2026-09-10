@@ -84,7 +84,7 @@ describe('commands:review', () => {
       const config = {
         version: '1.0.0',
         project: { name: 'test' },
-        review: { severity: 'medium' as const, maxFindings: 50 },
+        review: { severity: 'medium' as const, maxFindings: 50, minConfidence: 0.6 },
         rules: ['No bugs'],
         architecture: { boundaries: [], forbiddenDependencies: [] },
         ignore: [],
@@ -94,7 +94,10 @@ describe('commands:review', () => {
 
       expect(result).toBeDefined();
       expect(result.summary.filesAnalyzed).toBe(0);
+      expect(result.summary.totalFindings).toBe(0);
+      expect(result.findings).toEqual([]);
       expect(result.metadata.scopeType).toBe('working-tree');
+      expect(result.metadata.version).toBe('0.1.0');
     });
   });
 });

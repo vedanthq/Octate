@@ -12,6 +12,7 @@ describe('OctateConfigSchema', () => {
       expect(result.project.name).toBe('test-project');
       expect(result.review.severity).toBe('medium');
       expect(result.review.maxFindings).toBe(50);
+      expect(result.review.minConfidence).toBe(0.6);
       expect(result.rules).toEqual([]);
       expect(result.architecture.boundaries).toEqual([]);
       expect(result.architecture.forbiddenDependencies).toEqual([]);
@@ -22,7 +23,7 @@ describe('OctateConfigSchema', () => {
       const config = {
         version: '2.1.0',
         project: { name: 'my-project' },
-        review: { severity: 'high', maxFindings: 30 },
+        review: { severity: 'high', maxFindings: 30, minConfidence: 0.8 },
         rules: ['rule1', 'rule2'],
         architecture: {
           boundaries: ['src/core', 'src/api'],
@@ -34,6 +35,7 @@ describe('OctateConfigSchema', () => {
       expect(result.version).toBe('2.1.0');
       expect(result.review.severity).toBe('high');
       expect(result.review.maxFindings).toBe(30);
+      expect(result.review.minConfidence).toBe(0.8);
       expect(result.rules).toEqual(['rule1', 'rule2']);
       expect(result.architecture.boundaries).toEqual(['src/core', 'src/api']);
       expect(result.architecture.forbiddenDependencies).toEqual(['lodash', 'moment']);
@@ -102,6 +104,24 @@ describe('OctateConfigSchema', () => {
       expect(() => OctateConfigSchema.parse(config)).toThrow();
     });
 
+    it('rejects minConfidence below 0', () => {
+      const config = {
+        version: '1.0.0',
+        project: { name: 'test' },
+        review: { minConfidence: -0.1 },
+      };
+      expect(() => OctateConfigSchema.parse(config)).toThrow();
+    });
+
+    it('rejects minConfidence above 1', () => {
+      const config = {
+        version: '1.0.0',
+        project: { name: 'test' },
+        review: { minConfidence: 1.1 },
+      };
+      expect(() => OctateConfigSchema.parse(config)).toThrow();
+    });
+
     it('rejects unknown keys (strict mode)', () => {
       const config = {
         version: '1.0.0',
@@ -123,6 +143,7 @@ describe('OctateConfigSchema', () => {
       expect(DefaultConfig.project.name).toBe('unnamed-project');
       expect(DefaultConfig.review.severity).toBe('medium');
       expect(DefaultConfig.review.maxFindings).toBe(50);
+      expect(DefaultConfig.review.minConfidence).toBe(0.6);
     });
   });
 

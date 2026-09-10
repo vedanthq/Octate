@@ -35,7 +35,7 @@ describe('ReviewEngine', () => {
       config: {
         severity: 'medium',
         maxFindings: 50,
-        ...({ minConfidence: 0.6 } as Record<string, unknown>),
+        minConfidence: 0.6,
       },
       scopeMetadata: {
         scopeType: 'working-tree',

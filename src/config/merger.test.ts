@@ -74,7 +74,7 @@ describe('config/merger', () => {
       const global: OctateConfig = {
         ...DefaultConfig,
         project: { name: 'global-project' },
-        review: { severity: 'high', maxFindings: 100 },
+        review: { ...DefaultConfig.review, severity: 'high', maxFindings: 100 },
       };
       // Project config that only sets project name (not review)
       // Using Partial to avoid overriding review
@@ -93,12 +93,12 @@ describe('config/merger', () => {
       const global: OctateConfig = {
         ...DefaultConfig,
         project: { name: 'global-project' },
-        review: { severity: 'high', maxFindings: 100 },
+        review: { ...DefaultConfig.review, severity: 'high', maxFindings: 100 },
       };
       const project: OctateConfig = {
         ...DefaultConfig,
         project: { name: 'project-name' },
-        review: { severity: 'medium', maxFindings: 50 }, // project sets severity back to medium
+        review: { ...DefaultConfig.review, severity: 'medium', maxFindings: 50 }, // project sets severity back to medium
       };
       const merged = mergeConfigs(DefaultConfig, global, project, {}, {});
       expect(merged.project.name).toBe('project-name');
@@ -109,11 +109,11 @@ describe('config/merger', () => {
       const project: OctateConfig = {
         ...DefaultConfig,
         project: { name: 'project-name' },
-        review: { severity: 'medium', maxFindings: 50 },
+        review: { ...DefaultConfig.review, severity: 'medium', maxFindings: 50 },
       };
       const env: Partial<OctateConfig> = {
         project: { name: 'env-name' },
-        review: { severity: 'medium', maxFindings: 75 },
+        review: { ...DefaultConfig.review, severity: 'medium', maxFindings: 75 },
       };
       const merged = mergeConfigs(DefaultConfig, DefaultConfig, project, env, {});
       expect(merged.project.name).toBe('env-name');
@@ -122,8 +122,12 @@ describe('config/merger', () => {
     });
 
     it('CLI overrides env', () => {
-      const env: Partial<OctateConfig> = { review: { severity: 'high', maxFindings: 75 } };
-      const cli: Partial<OctateConfig> = { review: { severity: 'high', maxFindings: 10 } };
+      const env: Partial<OctateConfig> = {
+        review: { ...DefaultConfig.review, severity: 'high', maxFindings: 75 },
+      };
+      const cli: Partial<OctateConfig> = {
+        review: { ...DefaultConfig.review, severity: 'high', maxFindings: 10 },
+      };
       const merged = mergeConfigs(DefaultConfig, DefaultConfig, DefaultConfig, env, cli);
       expect(merged.review.severity).toBe('high'); // from env
       expect(merged.review.maxFindings).toBe(10); // from CLI
@@ -133,21 +137,21 @@ describe('config/merger', () => {
       const global: OctateConfig = {
         ...DefaultConfig,
         project: { name: 'global' },
-        review: { severity: 'low', maxFindings: 100 },
+        review: { ...DefaultConfig.review, severity: 'low', maxFindings: 100 },
         architecture: { boundaries: ['global-boundary'], forbiddenDependencies: [] },
       };
       const project: OctateConfig = {
         ...DefaultConfig,
         project: { name: 'project' },
-        review: { severity: 'medium', maxFindings: 50 },
+        review: { ...DefaultConfig.review, severity: 'medium', maxFindings: 50 },
         architecture: { boundaries: ['project-boundary'], forbiddenDependencies: ['lodash'] },
       };
       const env: Partial<OctateConfig> = {
-        review: { severity: 'high', maxFindings: 50 },
+        review: { ...DefaultConfig.review, severity: 'high', maxFindings: 50 },
         architecture: { boundaries: ['project-boundary'], forbiddenDependencies: ['moment'] },
       };
       const cli: Partial<OctateConfig> = {
-        review: { severity: 'high', maxFindings: 25 },
+        review: { ...DefaultConfig.review, severity: 'high', maxFindings: 25 },
         architecture: { boundaries: ['cli-boundary'], forbiddenDependencies: ['moment'] },
       };
 

@@ -49,6 +49,10 @@ export function parseEnvConfig(): Partial<OctateConfig> {
   return result as Partial<OctateConfig>;
 }
 
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
 /**
  * Merges configuration layers with explicit precedence:
  * defaults → global → project → env → CLI
@@ -58,8 +62,8 @@ export function mergeConfigs(
   defaults: OctateConfig,
   global: OctateConfig,
   project: OctateConfig,
-  env: Partial<OctateConfig>,
-  cli: Partial<OctateConfig>
+  env: DeepPartial<OctateConfig>,
+  cli: DeepPartial<OctateConfig>
 ): OctateConfig {
   logger.debug(
     {
@@ -72,9 +76,13 @@ export function mergeConfigs(
   );
 
   // Deep merge helper
-  function deepMerge<T extends Record<string, unknown>>(target: T, ...sources: Partial<T>[]): T {
+  function deepMerge<T extends Record<string, unknown>>(
+    target: T,
+    ...sources: Array<Record<string, unknown> | undefined>
+  ): T {
     const result = { ...target };
     for (const source of sources) {
+      if (!source) continue;
       for (const [key, value] of Object.entries(source)) {
         if (
           value !== null &&
@@ -112,8 +120,8 @@ export function mergeConfigs(
 export interface ConfigMergerOptions {
   projectConfig?: OctateConfig;
   globalConfig?: OctateConfig;
-  envConfig?: Partial<OctateConfig>;
-  cliConfig?: Partial<OctateConfig>;
+  envConfig?: DeepPartial<OctateConfig>;
+  cliConfig?: DeepPartial<OctateConfig>;
 }
 
 export async function loadConfig(options: ConfigMergerOptions = {}): Promise<OctateConfig> {

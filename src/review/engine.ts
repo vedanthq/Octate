@@ -142,8 +142,7 @@ export class ReviewEngine {
       reviewContext: input.reviewContext,
       diagnostics: input.diagnostics,
       model: input.model,
-      minConfidence:
-        (input.config as { minConfidence?: number } | undefined)?.minConfidence ?? 0.6,
+      minConfidence: input.config?.minConfidence ?? 0.6,
       signal: input.signal,
     });
 

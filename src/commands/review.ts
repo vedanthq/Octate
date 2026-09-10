@@ -19,9 +19,14 @@ import {
   serializePromptContext,
 } from '../intelligence/index.js';
 import { createLogger } from '../logging/index.js';
-import type { ModelRequest } from '../model/types.js';
+import { LocalNvidiaProvider, type ReviewModelInterface } from '../model/index.js';
 import { findGitRoot } from '../repository/discovery.js';
 import { parseRange, resolveScope, type ScopeOptions } from '../repository/scope.js';
+import {
+  createReviewEngine,
+  type RankedFinding,
+  type ReviewResult,
+} from '../review/index.js';
 
 const logger = createLogger('commands:review');
 
@@ -165,6 +170,7 @@ async function runReview(
         review: {
           severity: options.quiet ? 'info' : 'medium',
           maxFindings: 50,
+          minConfidence: 0.6,
         },
       },
     });
@@ -201,7 +207,8 @@ export async function executeReview(
   scope: Awaited<ReturnType<typeof resolveScope>>,
   config: Awaited<ReturnType<typeof loadConfig>>,
   signal: AbortSignal,
-  repoRoot: string
+  repoRoot: string,
+  modelOverride?: ReviewModelInterface
 ): Promise<ReviewResult> {
   const startTime = Date.now();
   const filePaths = scope.files.map((f) => f.path);
@@ -272,75 +279,29 @@ export async function executeReview(
     'Context Engine token budgeting metrics'
   );
 
-  // 6. Serialize prompt context in preparation for Phase 4 model call
-  const modelRequest: ModelRequest = {
-    systemPolicy: '',
-    reviewTask: 'Review changed files for bugs, security vulnerabilities, and design quality.',
-    projectRules: config.rules ?? [],
-    repoMetadata: {
-      root: repoRoot,
-      languages: {},
-      fileCount: filePaths.length,
-      totalLines: 0,
-    },
+  // 6. Execute full ReviewEngine pipeline
+  const model = modelOverride ?? new LocalNvidiaProvider();
+  const engine = createReviewEngine();
+
+  const result = await engine.run({
+    repoRoot,
     diff: scope.diff,
-    context: reviewContext.items ?? [],
+    changedFiles: filePaths,
+    reviewContext,
+    referenceGraph,
+    symbolIndex,
     diagnostics: analysis.diagnostics,
-    outputSchema: '',
-  };
-
-  const serializedPrompt = serializePromptContext(modelRequest);
-  logger.debug(
-    { promptLength: serializedPrompt.userPrompt.length },
-    'Prompt context serialized successfully'
-  );
-
-  const duration = Date.now() - startTime;
-
-  return {
-    summary: {
-      totalFindings: 0,
-      bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
-      filesAnalyzed: scope.files.length,
-      duration,
-    },
-    findings: [],
-    metadata: {
+    model,
+    config: config.review,
+    signal,
+    scopeMetadata: {
       scopeType: scope.type,
       base: scope.base,
       head: scope.head,
-      timestamp: new Date().toISOString(),
-      version: '0.1.0',
     },
-  };
-}
+  });
 
-/**
- * Review result structure.
- */
-interface ReviewResult {
-  summary: {
-    totalFindings: number;
-    bySeverity: Record<string, number>;
-    filesAnalyzed: number;
-    duration: number;
-  };
-  findings: Array<{
-    type: string;
-    severity: string;
-    file: string;
-    line: number;
-    message: string;
-    suggestion?: string;
-    confidence: number;
-  }>;
-  metadata: {
-    scopeType: string;
-    base: string;
-    head: string;
-    timestamp: string;
-    version: string;
-  };
+  return result;
 }
 
 /**
@@ -387,14 +348,14 @@ function convertToSarif(result: ReviewResult): string {
           },
         },
         results: result.findings.map((f) => ({
-          ruleId: f.type,
+          ruleId: f.category,
           level: severityToSarifLevel(f.severity),
           message: { text: f.message },
           locations: [
             {
               physicalLocation: {
                 artifactLocation: { uri: f.file },
-                region: { startLine: f.line },
+                region: { startLine: f.startLine ?? f.line ?? 1 },
               },
             },
           ],
@@ -447,12 +408,16 @@ function formatQuietOutput(result: ReviewResult): string {
  * Formats default human-readable output.
  */
 function formatDefaultOutput(result: ReviewResult): string {
+  const baseHead =
+    result.metadata.base || result.metadata.head
+      ? ` (${result.metadata.base ?? ''} → ${result.metadata.head ?? ''})`
+      : '';
   const lines = [
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
     ' Octate Code Review',
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    `Scope: ${result.metadata.scopeType} (${result.metadata.base} → ${result.metadata.head})`,
+    `Scope: ${result.metadata.scopeType}${baseHead}`,
     `Files analyzed: ${result.summary.filesAnalyzed}`,
     `Findings: ${result.summary.totalFindings}`,
     '',
@@ -464,12 +429,14 @@ function formatDefaultOutput(result: ReviewResult): string {
     lines.push('Findings:');
     for (const finding of result.findings) {
       const severityIcon = getSeverityIcon(finding.severity);
+      const lineNum = finding.startLine ?? finding.line ?? 1;
       lines.push(
-        `  ${severityIcon} [${finding.severity.toUpperCase()}] ${finding.file}:${finding.line}`
+        `  ${severityIcon} [${finding.severity.toUpperCase()}] ${finding.file}:${lineNum}`
       );
       lines.push(`      ${finding.message}`);
-      if (finding.suggestion) {
-        lines.push(`      💡 ${finding.suggestion}`);
+      const fix = finding.suggestedFix ?? (finding as { suggestion?: string }).suggestion;
+      if (fix) {
+        lines.push(`      💡 ${fix}`);
       }
       lines.push('');
     }
