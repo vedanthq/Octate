@@ -4,10 +4,10 @@ milestone: v2.1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: Model Provider
-status: ready_to_discuss
-stopped_at: Phase 3 completed
+status: ready_to_plan
+stopped_at: Phase 4 context gathered
 resume_file: .planning/phases/04-model-provider/04-CONTEXT.md
-last_updated: "2026-09-10T16:20:00.000Z"
+last_updated: "2026-09-10T16:35:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 3
@@ -20,8 +20,8 @@ progress:
 
 **Milestone:** 1 — Terminal-native AI Code Review MVP
 **Phase:** 4 — Model Provider
-**Plan:** 13 plans executed
-**Status:** Ready to discuss ✓
+**Plan:** Context gathered
+**Status:** Ready to plan ✓
 **Last Updated:** 2026-09-10
 
 ---
@@ -55,13 +55,13 @@ Repository Layer (Phase 1) ✓
 ## Current Position
 
 ```
-Phase: 04 (model-provider) — READY TO DISCUSS
+Phase: 04 (model-provider) — CONTEXT GATHERED ✓
 Plan: Not yet planned
-Status: Ready to discuss
+Status: Ready to plan
 Progress: [████░░░░░░] 38%
 ```
 
-**Next Action:** Discuss Phase 4 (Model Provider) → `/gsd-discuss-phase 4`
+**Next Action:** Plan Phase 4 (Model Provider) → `/gsd-plan-phase 4`
 
 ---
 
@@ -138,15 +138,15 @@ None
 
 ## Session Continuity
 
-**Last session:** 2026-09-10T16:20:00.000Z
-**Stopped at:** Phase 3 complete
+**Last session:** 2026-09-10T16:35:00.000Z
+**Stopped at:** Phase 4 context gathered
 **Resume file:** `.planning/phases/04-model-provider/04-CONTEXT.md`
 
 **Previous Session:** Executed Phase 3 (Intelligence Layer) — SymbolIndex, PathResolver, ReferenceGraph, DependencyGraph, ContextEngine, and serializePromptContext with review command pipeline wiring.
 
-**Current Session:** Completed Phase 3 verification, summarization, and roadmap update.
+**Current Session:** Gathered Phase 4 context — NVIDIA Nemotron provider, retry/rate-limit strategy, Zod schema validation & 2-turn repair loop, markdown prompt templates, and concurrency limiting.
 
-**Next Session:** `/gsd-discuss-phase 4` — discuss Model Provider (Phase 04)
+**Next Session:** `/gsd-plan-phase 4` — plan Model Provider (Phase 04)
 
 ---
 
@@ -178,6 +178,8 @@ None
 | 03-02 SUMMARY | `.planning/phases/03-intelligence-layer/03-02-SUMMARY.md` | ✓ Created |
 | 03-03 SUMMARY | `.planning/phases/03-intelligence-layer/03-03-SUMMARY.md` | ✓ Created |
 | 03-04 SUMMARY | `.planning/phases/03-intelligence-layer/03-04-SUMMARY.md` | ✓ Created |
+| 04-CONTEXT | `.planning/phases/04-model-provider/04-CONTEXT.md` | ✓ Created |
+| 04-DISCUSSION-LOG | `.planning/phases/04-model-provider/04-DISCUSSION-LOG.md` | ✓ Created |
 
 ---
 
