@@ -16,27 +16,27 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Parsing (PARSE)
 
-- [ ] **PARSE-01**: Parse TypeScript, JavaScript, and Python files using Tree-sitter for syntax trees, symbol discovery, imports/exports, and structural relationships
-- [ ] **PARSE-02**: Extract symbols (functions, methods, classes, interfaces, types, constants, variables, modules, exports, imports) with stable IDs, names, kinds, languages, file locations, ranges, parents, exported status, and references
-- [ ] **PARSE-03**: Build a reference graph tracking caller→callee, importer→imported, implementation→interface, test→production, route→handler, handler→service, service→repository relationships with bounded traversal
-- [ ] **PARSE-04**: Build a dependency graph tracking package dependencies, workspace packages, internal module dependencies, imports, runtime/dev/optional dependencies
+- [x] **PARSE-01**: Parse TypeScript, JavaScript, and Python files using Tree-sitter for syntax trees, symbol discovery, imports/exports, and structural relationships
+- [x] **PARSE-02**: Extract symbols (functions, methods, classes, interfaces, types, constants, variables, modules, exports, imports) with stable IDs, names, kinds, languages, file locations, ranges, parents, exported status, and references
+- [x] **PARSE-03**: Build a reference graph tracking caller→callee, importer→imported, implementation→interface, test→production, route→handler, handler→service, service→repository relationships with bounded traversal
+- [x] **PARSE-04**: Build a dependency graph tracking package dependencies, workspace packages, internal module dependencies, imports, runtime/dev/optional dependencies
 
 ### Analysis (ANAL)
 
-- [ ] **ANAL-01**: Run deterministic static analysis (TypeScript compiler, ESLint/Biome, ruff, mypy/pyright, pytest, bandit) respecting the repository's existing configuration
-- [ ] **ANAL-02**: Collect diagnostics, test discovery, and security scanner results for AI consumption
+- [x] **ANAL-01**: Run deterministic static analysis (TypeScript compiler, ESLint/Biome, ruff, mypy/pyright, pytest, bandit) respecting the repository's existing configuration
+- [x] **ANAL-02**: Collect diagnostics, test discovery, and security scanner results for AI consumption
 
 ### Context (CTX)
 
-- [ ] **CTX-01**: Build a Context Engine that ranks candidates (changed symbols, direct callers/callees, related types/tests/config/history/diagnostics) and produces a bounded ReviewContext within token budgets
-- [ ] **CTX-02**: Serialize context with clear separation: trusted instructions, trusted project rules, review task, repository metadata, diff, relevant source, static diagnostics — repository source as untrusted content
+- [x] **CTX-01**: Build a Context Engine that ranks candidates (changed symbols, direct callers/callees, related types/tests/config/history/diagnostics) and produces a bounded ReviewContext within token budgets
+- [x] **CTX-02**: Serialize context with clear separation: trusted instructions, trusted project rules, review task, repository metadata, diff, relevant source, static diagnostics — repository source as untrusted content
 
 ### Review (REV)
 
-- [ ] **REV-01**: Implement Review DAG with Structural Reviewer (API contracts, type misuse, lifecycle, error handling, nullability, resource management, concurrency, test gaps), Semantic Reviewer (business logic regressions, incorrect assumptions, behavioral changes, state transitions, edge cases, cross-module behavior, compatibility), Security Reviewer (auth, authz, input validation, injection, SSRF, path traversal, privilege escalation, secrets, crypto, deserialization, data exposure)
-- [ ] **REV-02**: Implement Critic to reduce false positives (truth verification, evidence proof, intentionality check, duplicate handling, impact meaningfulness, severity justification, actionability, deduplication, senior-engineer judgment)
-- [ ] **REV-03**: Deduplicate findings using file/range, issue signature, symbol, evidence overlap, semantic similarity — keep strongest explanation
-- [ ] **REV-04**: Rank findings by severity, confidence, evidence strength, blast radius, security impact, regression probability, actionability
+- [x] **REV-01**: Implement Review DAG with Structural Reviewer (API contracts, type misuse, lifecycle, error handling, nullability, resource management, concurrency, test gaps), Semantic Reviewer (business logic regressions, incorrect assumptions, behavioral changes, state transitions, edge cases, cross-module behavior, compatibility), Security Reviewer (auth, authz, input validation, injection, SSRF, path traversal, privilege escalation, secrets, crypto, deserialization, data exposure)
+- [x] **REV-02**: Implement Critic to reduce false positives (truth verification, evidence proof, intentionality check, duplicate handling, impact meaningfulness, severity justification, actionability, deduplication, senior-engineer judgment)
+- [x] **REV-03**: Deduplicate findings using file/range, issue signature, symbol, evidence overlap, semantic similarity — keep strongest explanation
+- [x] **REV-04**: Rank findings by severity, confidence, evidence strength, blast radius, security impact, regression probability, actionability
 
 ### Model (MODEL)
 
@@ -136,18 +136,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPO-02 | Phase 1 | Complete |
 | REPO-03 | Phase 1 | Complete |
 | REPO-04 | Phase 1 | Complete |
-| PARSE-01 | Phase 2 | Pending |
-| PARSE-02 | Phase 2 | Pending |
-| PARSE-03 | Phase 3 | Pending |
-| PARSE-04 | Phase 3 | Pending |
-| ANAL-01 | Phase 2 | Pending |
-| ANAL-02 | Phase 2 | Pending |
-| CTX-01 | Phase 3 | Pending |
-| CTX-02 | Phase 3 | Pending |
-| REV-01 | Phase 5 | Pending |
-| REV-02 | Phase 5 | Pending |
-| REV-03 | Phase 5 | Pending |
-| REV-04 | Phase 5 | Pending |
+| PARSE-01 | Phase 2 | Complete |
+| PARSE-02 | Phase 2 | Complete |
+| PARSE-03 | Phase 3 | Complete |
+| PARSE-04 | Phase 3 | Complete |
+| ANAL-01 | Phase 2 | Complete |
+| ANAL-02 | Phase 2 | Complete |
+| CTX-01 | Phase 3 | Complete |
+| CTX-02 | Phase 3 | Complete |
+| REV-01 | Phase 5 | Complete |
+| REV-02 | Phase 5 | Complete |
+| REV-03 | Phase 5 | Complete |
+| REV-04 | Phase 5 | Complete |
 | MODEL-01 | Phase 4 | Complete |
 | MODEL-02 | Phase 1 | Complete |
 | MODEL-03 | Phase 4 | Complete |

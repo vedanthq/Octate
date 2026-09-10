@@ -1,9 +1,9 @@
 ---
 phase: 5
 slug: review-engine
-status: draft
+status: verified
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-09-10
 ---
 
@@ -38,12 +38,12 @@ created: 2026-09-10
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | REV-01 | T-05-01 | Untrusted diffs separated from instructions | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/heuristics.test.ts` | ❌ W0 | ⬜ pending |
-| 05-01-02 | 01 | 1 | REV-01 | T-05-02 | Graceful reviewer degradation without stalling | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/dag.test.ts` | ❌ W0 | ⬜ pending |
-| 05-02-01 | 02 | 2 | REV-03 | T-05-03 | Prevent duplicate finding noise / memory blowup | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/dedup.test.ts` | ❌ W0 | ⬜ pending |
-| 05-02-02 | 02 | 2 | REV-02 | T-05-04 | Strict grounding & fail-fast on corrupted Critic | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/critic.test.ts` | ❌ W0 | ⬜ pending |
-| 05-03-01 | 03 | 3 | REV-04 | T-05-05 | Accurate composite ranking with Critical-protection | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/ranking.test.ts` | ❌ W0 | ⬜ pending |
-| 05-03-02 | 03 | 3 | REV-01..04 | T-05-06 | End-to-end review engine pipeline integration | integration | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/engine.test.ts` | ❌ W0 | ⬜ pending |
+| 05-01-01 | 01 | 1 | REV-01 | T-05-01 | Untrusted diffs separated from instructions | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/heuristics.test.ts` | ✅ | ✅ green |
+| 05-01-02 | 01 | 1 | REV-01 | T-05-02 | Graceful reviewer degradation without stalling | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/dag.test.ts` | ✅ | ✅ green |
+| 05-02-01 | 02 | 2 | REV-03 | T-05-03 | Prevent duplicate finding noise / memory blowup | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/dedup.test.ts` | ✅ | ✅ green |
+| 05-02-02 | 02 | 2 | REV-02 | T-05-04 | Strict grounding & fail-fast on corrupted Critic | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/critic.test.ts` | ✅ | ✅ green |
+| 05-03-01 | 03 | 3 | REV-04 | T-05-05 | Accurate composite ranking with Critical-protection | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/ranking.test.ts` | ✅ | ✅ green |
+| 05-03-02 | 03 | 3 | REV-01..04 | T-05-06 | End-to-end review engine pipeline integration | integration | `NODE_OPTIONS=--experimental-vm-modules npx jest src/review/engine.test.ts` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,8 +51,8 @@ created: 2026-09-10
 
 ## Wave 0 Requirements
 
-- [ ] `src/review/__tests__/mocks.ts` — `MockReviewModel` fixture simulating structural, semantic, security reviewers and critic
-- [ ] Shared fixtures in `src/review/` test files covering candidate findings, diff snippets, and ReferenceGraph mock stubs
+- [x] `src/review/__tests__/mocks.ts` — `MockReviewModel` fixture simulating structural, semantic, security reviewers and critic
+- [x] Shared fixtures in `src/review/` test files covering candidate findings, diff snippets, and ReferenceGraph mock stubs
 
 ---
 

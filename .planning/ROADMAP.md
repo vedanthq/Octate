@@ -11,10 +11,10 @@
 ## Phases
 
 - [x] **Phase 1: Foundation & Repository Layer** — Repository discovery, Git diff, config, cache, model abstraction
-- [ ] **Phase 2: Analysis Layer** — Tree-sitter parsing, symbol extraction, static analysis, diagnostics
-- [ ] **Phase 3: Intelligence Layer** — Symbol index, reference/dependency graphs, Context Engine with token budgeting
-- [ ] **Phase 4: Model Provider** — NVIDIA adapter, versioned prompts, schema validation, prompt injection protection
-- [ ] **Phase 5: Review Engine** — Review DAG (Structural/Semantic/Security reviewers → Critic → Dedup → Ranking)
+- [x] **Phase 2: Analysis Layer** — Tree-sitter parsing, symbol extraction, static analysis, diagnostics
+- [x] **Phase 3: Intelligence Layer** — Symbol index, reference/dependency graphs, Context Engine with token budgeting
+- [x] **Phase 4: Model Provider** — NVIDIA adapter, versioned prompts, schema validation, prompt injection protection
+- [x] **Phase 5: Review Engine** — Review DAG (Structural/Semantic/Security reviewers → Critic → Dedup → Ranking)
 - [ ] **Phase 6: Application Layer** — ReviewUseCase orchestration, progress streaming, cancellation, exit codes
 - [ ] **Phase 7: Terminal Presentation** — Interactive TUI workspace, JSON/SARIF/quiet renderers
 - [ ] **Phase 8: CLI Integration, Polish & Evaluation** — Full command set, doctor, evaluation fixtures, performance validation
@@ -113,9 +113,9 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 05-01-PLAN.md — Domain Models, Heuristic Triggers & Staged Review DAG (REV-01)
-- [ ] 05-02-PLAN.md — Deduplication Engine & Two-Stage Critic Quality Gate (REV-02, REV-03)
-- [ ] 05-03-PLAN.md — Composite Ranking, Engine Orchestrator & CLI Integration (REV-04, REV-01..04)
+- [x] 05-01-PLAN.md — Domain Models, Heuristic Triggers & Staged Review DAG (REV-01)
+- [x] 05-02-PLAN.md — Deduplication Engine & Two-Stage Critic Quality Gate (REV-02, REV-03)
+- [x] 05-03-PLAN.md — Composite Ranking, Engine Orchestrator & CLI Integration (REV-04, REV-01..04)
 
 ### Phase 6: Application Layer
 **Goal**: Full review pipeline executes from CLI command to ReviewResult with progress streaming, cancellation, and exit codes.
