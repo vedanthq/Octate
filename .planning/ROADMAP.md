@@ -95,8 +95,8 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 04-01-PLAN.md — Prompt Templates & Lightweight Template Rendering Engine (MODEL-04)
-- [ ] 04-02-PLAN.md — Zod Schema Compilation, Robust JSON Extraction & Repository Grounding (MODEL-03)
+- [x] 04-01-PLAN.md — Prompt Templates & Lightweight Template Rendering Engine (MODEL-04)
+- [x] 04-02-PLAN.md — Zod Schema Compilation, Robust JSON Extraction & Repository Grounding (MODEL-03)
 - [ ] 04-03-PLAN.md — NVIDIA Nemotron Provider, Concurrency Limiting, Retries & Cancellation (MODEL-01, MODEL-02)
 
 ### Phase 5: Review Engine
