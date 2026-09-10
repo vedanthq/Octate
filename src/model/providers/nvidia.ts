@@ -18,13 +18,13 @@ import type {
 import { type ErrorWithHttpMetadata, ResilienceManager } from './resilience.js';
 
 export interface LocalNvidiaProviderOptions {
-  apiKey?: string;
-  timeoutMs?: number;
-  maxRetries?: number;
-  concurrency?: number;
-  modelId?: string;
-  endpointUrl?: string;
-  repoRoot?: string;
+  apiKey?: string | undefined;
+  timeoutMs?: number | undefined;
+  maxRetries?: number | undefined;
+  concurrency?: number | undefined;
+  modelId?: string | undefined;
+  endpointUrl?: string | undefined;
+  repoRoot?: string | undefined;
 }
 
 interface NvidiaChatChoice {
@@ -185,9 +185,9 @@ export class LocalNvidiaProvider implements ReviewModel {
         );
 
       if (completion.usage) {
-        accumulatedUsage.promptTokens += completion.usage['prompt_tokens'] ?? 0;
-        accumulatedUsage.completionTokens += completion.usage['completion_tokens'] ?? 0;
-        accumulatedUsage.totalTokens += completion.usage['total_tokens'] ?? 0;
+        accumulatedUsage.promptTokens += completion.usage.prompt_tokens ?? 0;
+        accumulatedUsage.completionTokens += completion.usage.completion_tokens ?? 0;
+        accumulatedUsage.totalTokens += completion.usage.total_tokens ?? 0;
       }
 
       if (completion.model) {
@@ -196,7 +196,7 @@ export class LocalNvidiaProvider implements ReviewModel {
 
       const choice = completion.choices?.[0];
       lastRawContent = choice?.message?.content ?? '';
-      finishReason = mapFinishReason(choice?.['finish_reason']);
+      finishReason = mapFinishReason(choice?.finish_reason);
 
       const parsed = safeJsonParse(lastRawContent);
       if (parsed.success) {
