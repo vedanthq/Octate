@@ -1,22 +1,22 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1.0
+milestone: v1.0.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 4 planning complete
-last_updated: "2026-09-10T13:17:36.709Z"
+status: ready-to-plan
+stopped_at: Phase 5 context gathered
+last_updated: "2026-09-10T19:35:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_plans: 19
+  completed_plans: 19
+  percent: 50
 ---
 
 # Project State: Octate
 
 **Milestone:** 1 — Terminal-native AI Code Review MVP
-**Phase:** 5
+**Phase:** 5 (Review Engine)
 **Plan:** Not started
 **Status:** Ready to plan
 **Last Updated:** 2026-09-10
@@ -27,7 +27,7 @@ progress:
 
 **Core Value:** Make developers trust `octate review` by combining deterministic repository analysis with AI reasoning to produce evidence-backed, high-quality code-review findings.
 
-**Current Focus:** Phase 04 — model-provider
+**Current Focus:** Phase 05 — review-engine
 
 **Architecture:** 8-layer strict dependency order
 
@@ -36,9 +36,9 @@ Terminal Presentation (Phase 7)
        │
 Command/Application (Phase 6)
        │
-Review Engine (Phase 5)
+Review Engine (Phase 5) ◄ Current Focus
        │
-Model Provider (Phase 4) ◄ Current Focus
+Model Provider (Phase 4) ✓
        │
 Context Engine (Phase 3) ✓
        │
@@ -52,13 +52,12 @@ Repository Layer (Phase 1) ✓
 ## Current Position
 
 ```
-Phase: 04 (model-provider) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 04
-Progress: [████░░░░░░] 38%
+Phase: 05 (review-engine) — READY TO PLAN
+Status: Context gathered, ready for /gsd-plan-phase 5
+Progress: [█████░░░░░] 50%
 ```
 
-**Next Action:** Execute Phase 4 (Model Provider) → `/gsd-execute-phase 4`
+**Next Action:** Plan Phase 5 (Review Engine) → `/gsd-plan-phase 5`
 
 ---
 
@@ -102,8 +101,17 @@ Progress: [████░░░░░░] 38%
 | 2025-09-07 | ReviewScope with 5 modes | staged, working-tree, commit, range, branch |
 | 2025-09-07 | Three-dot range uses merge base | Enables PR-style reviews |
 | 2025-09-07 | Commit message trimming | isomorphic-git returns messages with trailing newlines |
+| 2026-09-10 | Staged Review DAG topology | Structural runs first; Semantic & Security execute conditionally based on AST diff patterns |
+| 2026-09-10 | Two-stage Critic filter | Deterministic grounding/confidence pre-filter before calling LLM Critic; fail-fast if Critic fails |
+| 2026-09-10 | Multi-factor finding deduplication | Merge by file+range, symbol+category, or root-cause signature; escalate severity, union evidence (cap 5) |
+| 2026-09-10 | Normalized composite ranking | Linear weighted sum (severity, confidence, blast radius, evidence, security, regression); never drop Critical findings |
 
 ### Active Todos
+
+- [x] Plan & Execute Phase 4 (Model Provider)
+- [x] Gather Phase 5 context (Review Engine)
+- [ ] Plan Phase 5 (Review Engine)
+- [ ] Execute Phase 5 (Review Engine)
 
 - [x] Approve roadmap
 - [x] Plan Phase 1 (Foundation & Repository Layer)
