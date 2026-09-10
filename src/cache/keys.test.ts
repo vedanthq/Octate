@@ -222,7 +222,10 @@ describe('configVersion', () => {
     await fs.writeFile(path.join(testDir, 'tsconfig.json'), '{"compilerOptions": {}}');
     const version1 = await configVersion(testDir);
 
-    await fs.writeFile(path.join(testDir, 'tsconfig.json'), '{"compilerOptions": {"strict": true}}');
+    await fs.writeFile(
+      path.join(testDir, 'tsconfig.json'),
+      '{"compilerOptions": {"strict": true}}'
+    );
     const version2 = await configVersion(testDir);
 
     expect(version1).not.toBe(version2);
@@ -244,8 +247,18 @@ describe('diagnosticsKey', () => {
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 1;');
     await fs.writeFile(path.join(testDir, 'file2.ts'), 'const b = 2;');
 
-    const key1 = await diagnosticsKey(['file1.ts', 'file2.ts'], testDir, ['tsc', 'biome'], 'config-v1');
-    const key2 = await diagnosticsKey(['file1.ts', 'file2.ts'], testDir, ['tsc', 'biome'], 'config-v1');
+    const key1 = await diagnosticsKey(
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      ['tsc', 'biome'],
+      'config-v1'
+    );
+    const key2 = await diagnosticsKey(
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      ['tsc', 'biome'],
+      'config-v1'
+    );
 
     expect(key1).toBe(key2);
   });
@@ -254,10 +267,20 @@ describe('diagnosticsKey', () => {
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 1;');
     await fs.writeFile(path.join(testDir, 'file2.ts'), 'const b = 2;');
 
-    const key1 = await diagnosticsKey(['file1.ts', 'file2.ts'], testDir, ['tsc', 'biome'], 'config-v1');
+    const key1 = await diagnosticsKey(
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      ['tsc', 'biome'],
+      'config-v1'
+    );
 
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 2;'); // Changed content
-    const key2 = await diagnosticsKey(['file1.ts', 'file2.ts'], testDir, ['tsc', 'biome'], 'config-v1');
+    const key2 = await diagnosticsKey(
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      ['tsc', 'biome'],
+      'config-v1'
+    );
 
     expect(key1).not.toBe(key2);
   });
@@ -275,8 +298,18 @@ describe('diagnosticsKey', () => {
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 1;');
     await fs.writeFile(path.join(testDir, 'file2.ts'), 'const b = 2;');
 
-    const key1 = await diagnosticsKey(['file2.ts', 'file1.ts'], testDir, ['tsc', 'biome'], 'config-v1');
-    const key2 = await diagnosticsKey(['file1.ts', 'file2.ts'], testDir, ['tsc', 'biome'], 'config-v1');
+    const key1 = await diagnosticsKey(
+      ['file2.ts', 'file1.ts'],
+      testDir,
+      ['tsc', 'biome'],
+      'config-v1'
+    );
+    const key2 = await diagnosticsKey(
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      ['tsc', 'biome'],
+      'config-v1'
+    );
 
     expect(key1).toBe(key2);
   });
@@ -294,7 +327,7 @@ describe('diagnosticsKey', () => {
     // This test verifies the key structure includes tool info
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 1;');
     const key = await diagnosticsKey(['file1.ts'], testDir, ['tsc', 'biome'], 'config-v1');
-    
+
     // Key should be a valid hash string (32 chars from cacheKey)
     expect(key).toHaveLength(32);
     expect(key).toMatch(/^[a-f0-9]+$/);
@@ -316,8 +349,20 @@ describe('toolResultKey', () => {
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 1;');
     await fs.writeFile(path.join(testDir, 'file2.ts'), 'const b = 2;');
 
-    const key1 = await toolResultKey('tsc', ['file1.ts', 'file2.ts'], testDir, 'tsc-5.0.0', 'config-v1');
-    const key2 = await toolResultKey('tsc', ['file1.ts', 'file2.ts'], testDir, 'tsc-5.0.0', 'config-v1');
+    const key1 = await toolResultKey(
+      'tsc',
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      'tsc-5.0.0',
+      'config-v1'
+    );
+    const key2 = await toolResultKey(
+      'tsc',
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      'tsc-5.0.0',
+      'config-v1'
+    );
 
     expect(key1).toBe(key2);
   });
@@ -355,8 +400,20 @@ describe('toolResultKey', () => {
     await fs.writeFile(path.join(testDir, 'file1.ts'), 'const a = 1;');
     await fs.writeFile(path.join(testDir, 'file2.ts'), 'const b = 2;');
 
-    const key1 = await toolResultKey('tsc', ['file2.ts', 'file1.ts'], testDir, 'tsc-5.0.0', 'config-v1');
-    const key2 = await toolResultKey('tsc', ['file1.ts', 'file2.ts'], testDir, 'tsc-5.0.0', 'config-v1');
+    const key1 = await toolResultKey(
+      'tsc',
+      ['file2.ts', 'file1.ts'],
+      testDir,
+      'tsc-5.0.0',
+      'config-v1'
+    );
+    const key2 = await toolResultKey(
+      'tsc',
+      ['file1.ts', 'file2.ts'],
+      testDir,
+      'tsc-5.0.0',
+      'config-v1'
+    );
 
     expect(key1).toBe(key2);
   });

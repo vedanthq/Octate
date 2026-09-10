@@ -135,14 +135,14 @@ export function spawnWithSignal(
       }
 
       if (code !== 0) {
-reject(
-        new SubprocessError(`${command} exited with code ${code}`, {
-          code: code?.toString() ?? '',
-          signal: signal ?? '',
-          stdout,
-          stderr,
-        })
-      );
+        reject(
+          new SubprocessError(`${command} exited with code ${code}`, {
+            code: code?.toString() ?? '',
+            signal: signal ?? '',
+            stdout,
+            stderr,
+          })
+        );
         return;
       }
 

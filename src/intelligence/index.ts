@@ -18,6 +18,11 @@ export {
   type ContextEngineOptions,
   createContextEngine,
 } from './context/engine.js';
+export {
+  formatDiagnosticsSection,
+  formatUntrustedCodeFence,
+  serializePromptContext,
+} from './context/serializer.js';
 export { formatNumberedLines, windowSnippet } from './context/windowing.js';
 export {
   createDependencyGraph,

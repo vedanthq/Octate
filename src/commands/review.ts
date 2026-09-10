@@ -3,6 +3,7 @@
  */
 
 import { Command } from 'commander';
+import { analyzeFiles } from '../analysis/orchestrator.js';
 import {
   type CancellationController,
   createCancellationController,
@@ -10,7 +11,15 @@ import {
 } from '../cancellation/index.js';
 import { loadConfig } from '../config/merger.js';
 import { ConfigurationError, GitError } from '../errors/index.js';
+import {
+  createContextEngine,
+  createPathResolver,
+  createReferenceGraph,
+  createSymbolIndex,
+  serializePromptContext,
+} from '../intelligence/index.js';
 import { createLogger } from '../logging/index.js';
+import type { ModelRequest } from '../model/types.js';
 import { findGitRoot } from '../repository/discovery.js';
 import { parseRange, resolveScope, type ScopeOptions } from '../repository/scope.js';
 
@@ -35,7 +44,7 @@ export function createReviewCommand(): Command {
     .option('--no-tui', 'Disable interactive TUI (use with --json/--sarif/--quiet)')
     .action(async (refs: string[], options: ReviewOptions) => {
       const controller = createCancellationController();
-      return runReview(controller, refs, options);
+      await runReview(controller, refs, options);
     });
 
   return cmd;
@@ -113,7 +122,7 @@ function getScopeOptions(options: ReviewOptions, refs: string[], repoRoot: strin
     return { type: 'commit', repoRoot, commit: options.commit };
   }
   if (options.range) {
-    const { base, head, isThreeDot } = parseRange(options.range);
+    const { base, head } = parseRange(options.range);
     return { type: 'range', repoRoot, base, head };
   }
   if (options.branch) {
@@ -171,7 +180,7 @@ async function runReview(
 
     // Run review with cancellation
     const result = await withCancellation(async (signal) => {
-      return executeReview(scope, config, signal);
+      return await executeReview(scope, config, signal, repoRoot);
     }, controller.signal);
 
     // Output results
@@ -186,23 +195,114 @@ async function runReview(
 }
 
 /**
- * Executes the review logic (placeholder for Phase 5+ integration).
+ * Executes the review logic using AnalysisOrchestrator and ContextEngine.
  */
-async function executeReview(
+export async function executeReview(
   scope: Awaited<ReturnType<typeof resolveScope>>,
-  _config: Awaited<ReturnType<typeof loadConfig>>,
-  _signal: AbortSignal
+  config: Awaited<ReturnType<typeof loadConfig>>,
+  signal: AbortSignal,
+  repoRoot: string
 ): Promise<ReviewResult> {
-  // This is a placeholder implementation for Phase 1
-  // Full review engine will be implemented in Phase 5
-  logger.info('Executing review (placeholder implementation)');
+  const startTime = Date.now();
+  const filePaths = scope.files.map((f) => f.path);
+
+  logger.info({ fileCount: filePaths.length }, 'Running deterministic analysis pipeline');
+
+  // 1. Run Analysis Orchestrator (Tree-sitter parse, symbol extraction, static diagnostics)
+  const analysis = await analyzeFiles(filePaths, repoRoot, { signal });
+
+  // 2. Read file contents into map for intelligence layer
+  const { readFile } = await import('node:fs/promises');
+  const fileContents = new Map<string, string>();
+  await Promise.all(
+    filePaths.map(async (file) => {
+      try {
+        const content = await readFile(`${repoRoot}/${file}`, 'utf-8');
+        fileContents.set(file, content);
+      } catch {
+        fileContents.set(file, '');
+      }
+    })
+  );
+
+  // 3. Build SymbolIndex and PathResolver
+  const symbolIndex = createSymbolIndex(analysis.parsedFiles, fileContents);
+  const pathResolver = await createPathResolver(repoRoot);
+
+  // 4. Build ReferenceGraph
+  const referenceGraph = createReferenceGraph(
+    analysis.parsedFiles,
+    symbolIndex,
+    pathResolver,
+    undefined,
+    fileContents
+  );
+
+  // 5. Build ReviewContext via ContextEngine
+  const contextEngine = createContextEngine();
+  const reviewContext = await contextEngine.buildContext({
+    changedFiles: filePaths,
+    diff: scope.diff,
+    symbolIndex,
+    referenceGraph,
+    diagnostics: analysis.diagnostics,
+    readFile: async (file: string) => {
+      const existing = fileContents.get(file);
+      if (existing !== undefined) return existing;
+      try {
+        const c = await readFile(`${repoRoot}/${file}`, 'utf-8');
+        fileContents.set(file, c);
+        return c;
+      } catch {
+        return '';
+      }
+    },
+  });
+
+  // Log context metrics via Pino logger
+  logger.info(
+    {
+      candidateCount: reviewContext.metrics.candidateCount,
+      selectedCount: reviewContext.metrics.selectedCount,
+      candidateTokens: reviewContext.metrics.candidateTokens,
+      selectedTokens: reviewContext.metrics.selectedTokens,
+      selectionRatio: reviewContext.metrics.selectionRatio,
+      totalTokens: reviewContext.totalTokens,
+    },
+    'Context Engine token budgeting metrics'
+  );
+
+  // 6. Serialize prompt context in preparation for Phase 4 model call
+  const modelRequest: ModelRequest = {
+    systemPolicy: '',
+    reviewTask: 'Review changed files for bugs, security vulnerabilities, and design quality.',
+    projectRules: config.rules ?? [],
+    repoMetadata: {
+      root: repoRoot,
+      languages: {},
+      fileCount: filePaths.length,
+      totalLines: 0,
+    },
+    diff: scope.diff,
+    context: reviewContext.items ?? [],
+    diagnostics: analysis.diagnostics,
+    outputSchema: '',
+  };
+
+  const serializedPrompt = serializePromptContext(modelRequest);
+  logger.debug(
+    { promptLength: serializedPrompt.userPrompt.length },
+    'Prompt context serialized successfully'
+  );
+
+  const duration = Date.now() - startTime;
 
   return {
     summary: {
       totalFindings: 0,
       bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
       filesAnalyzed: scope.files.length,
-      duration: 0,
+      duration,
     },
     findings: [],
     metadata: {
@@ -333,7 +433,7 @@ function formatQuietOutput(result: ReviewResult): string {
     return `✓ No findings in ${filesAnalyzed} files`;
   }
 
-  const parts = [];
+  const parts: string[] = [];
   if (critical > 0) parts.push(`${critical} critical`);
   if (high > 0) parts.push(`${high} high`);
   if ((bySeverity.medium ?? 0) > 0) parts.push(`${bySeverity.medium} medium`);

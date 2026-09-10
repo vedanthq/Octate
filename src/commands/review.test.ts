@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { createReviewCommand } from './review.js';
+import { createReviewCommand, executeReview } from './review.js';
 
 describe('commands:review', () => {
   let command: ReturnType<typeof createReviewCommand>;
@@ -38,25 +38,25 @@ describe('commands:review', () => {
 
     it('accepts variadic refs argument', () => {
       // Commander.js defines arguments in _args internally (not in public types)
-      const args = (command as any)._args ?? command.args;
+      const args = (command as unknown as { _args?: unknown[] })._args ?? command.args;
       expect(args.length).toBeGreaterThan(0);
     });
   });
 
   describe('validateScope', () => {
     // We can't directly test the private function, but we can test via command parsing
-    it('rejects when no scope specified', async () => {
+    it('rejects when no scope specified', () => {
       // This would be tested via integration test
       expect(true).toBe(true);
     });
 
-    it('rejects when multiple scopes specified', async () => {
+    it('rejects when multiple scopes specified', () => {
       expect(true).toBe(true);
     });
   });
 
   describe('validateOutputMode', () => {
-    it('rejects when multiple output modes specified', async () => {
+    it('rejects when multiple output modes specified', () => {
       expect(true).toBe(true);
     });
   });
@@ -69,6 +69,32 @@ describe('commands:review', () => {
 
     it('parses three-dot range', () => {
       expect(true).toBe(true);
+    });
+  });
+
+  describe('executeReview', () => {
+    it('executes analysis and context engine pipeline on review scope', async () => {
+      const scope = {
+        type: 'working-tree' as const,
+        base: 'HEAD',
+        head: 'working-tree',
+        files: [],
+        diff: '',
+      };
+      const config = {
+        version: '1.0.0',
+        project: { name: 'test' },
+        review: { severity: 'medium' as const, maxFindings: 50 },
+        rules: ['No bugs'],
+        architecture: { boundaries: [], forbiddenDependencies: [] },
+        ignore: [],
+      };
+      const controller = new AbortController();
+      const result = await executeReview(scope, config, controller.signal, process.cwd());
+
+      expect(result).toBeDefined();
+      expect(result.summary.filesAnalyzed).toBe(0);
+      expect(result.metadata.scopeType).toBe('working-tree');
     });
   });
 });

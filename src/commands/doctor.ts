@@ -272,7 +272,12 @@ async function checkCacheHealth(): Promise<DoctorCheck> {
     const retrieved = await store.get(testKey);
     await store.delete(testKey);
 
-    const isWorking = retrieved && typeof retrieved === 'object' && retrieved.value && typeof retrieved.value === 'object' && 'test' in retrieved.value;
+    const isWorking =
+      retrieved &&
+      typeof retrieved === 'object' &&
+      retrieved.value &&
+      typeof retrieved.value === 'object' &&
+      'test' in retrieved.value;
 
     // Get cache stats
     let size = 0;

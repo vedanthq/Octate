@@ -233,7 +233,7 @@ export class FileFilter {
     // 1. Check ignore patterns first (fastest)
     const isIgnored = this.ignoreMatcher.ignores(relativePath);
 
-// 2. Get file stats for size check
+    // 2. Get file stats for size check
     let size = 0;
     let isLarge = false;
     const stats = await stat(absolutePath);
@@ -256,12 +256,9 @@ export class FileFilter {
     const allowBinary = this.config.allowBinary ?? false;
     const allowGenerated = this.config.allowGenerated ?? false;
     const maxFileSize = this.config.maxFileSize ?? MAX_FILE_SIZE;
-    
+
     const shouldAnalyze =
-      !isIgnored &&
-      !isLarge &&
-      (!isBinary || allowBinary) &&
-      (!isGenerated || allowGenerated);
+      !isIgnored && !isLarge && (!isBinary || allowBinary) && (!isGenerated || allowGenerated);
     let reason: string | undefined;
 
     if (isIgnored) {
