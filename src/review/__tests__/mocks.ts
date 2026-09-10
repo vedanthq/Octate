@@ -48,6 +48,14 @@ export class MockReviewModel implements ReviewModel {
     await Promise.resolve();
     this.calls.push(request);
     const task = request.reviewTask.toLowerCase();
+    const firstLine = (request.reviewTask.split('\n')[0] ?? '').toLowerCase();
+
+    // Prioritize matching the role header on the first line to avoid false matches in finding payloads
+    for (const [key, handler] of this.handlers.entries()) {
+      if (firstLine.includes(key)) {
+        return handler(request);
+      }
+    }
 
     for (const [key, handler] of this.handlers.entries()) {
       if (task.includes(key)) {
