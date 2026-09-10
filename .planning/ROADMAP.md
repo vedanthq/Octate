@@ -77,10 +77,10 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 03-01-PLAN.md — Symbol Index & Cross-File Path Resolution (PARSE-03)
-- [ ] 03-02-PLAN.md — Reference Graph & Dependency Graph with Disk Serialization (PARSE-03, PARSE-04)
-- [ ] 03-03-PLAN.md — Context Engine, Token Budgeting & Snippet Windowing (CTX-01)
-- [ ] 03-04-PLAN.md — Prompt Context Serialization & Trust Demarcation (CTX-02, MODEL-04)
+- [x] 03-01-PLAN.md — Symbol Index & Cross-File Path Resolution (PARSE-03)
+- [x] 03-02-PLAN.md — Reference Graph & Dependency Graph with Disk Serialization (PARSE-03, PARSE-04)
+- [x] 03-03-PLAN.md — Context Engine, Token Budgeting & Snippet Windowing (CTX-01)
+- [x] 03-04-PLAN.md — Prompt Context Serialization & Trust Demarcation (CTX-02, MODEL-04)
 
 ### Phase 4: Model Provider
 **Goal**: NVIDIA Nemotron 3 Ultra is callable via clean abstraction with schema-validated, prompt-injection-protected output.
@@ -158,8 +158,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Repository Layer | 7/7 | Complete | 2026-09-09 |
-| 2. Analysis Layer | 2/2 | Planned | - |
-| 3. Intelligence Layer | 0/0 | Not started | - |
+| 2. Analysis Layer | 2/2 | Complete | 2026-09-09 |
+| 3. Intelligence Layer | 4/4 | Complete | 2026-09-10 |
 | 4. Model Provider | 0/0 | Not started | - |
 | 5. Review Engine | 0/0 | Not started | - |
 | 6. Application Layer | 0/0 | Not started | - |
@@ -176,14 +176,14 @@ Plans:
 | REPO-02 | Phase 1 | Complete |
 | REPO-03 | Phase 1 | Complete |
 | REPO-04 | Phase 1 | Complete |
-| PARSE-01 | Phase 2 | Pending |
-| PARSE-02 | Phase 2 | Pending |
-| PARSE-03 | Phase 3 | Pending |
-| PARSE-04 | Phase 3 | Pending |
-| ANAL-01 | Phase 2 | Pending |
-| ANAL-02 | Phase 2 | Pending |
-| CTX-01 | Phase 3 | Pending |
-| CTX-02 | Phase 3 | Pending |
+| PARSE-01 | Phase 2 | Complete |
+| PARSE-02 | Phase 2 | Complete |
+| PARSE-03 | Phase 3 | Complete |
+| PARSE-04 | Phase 3 | Complete |
+| ANAL-01 | Phase 2 | Complete |
+| ANAL-02 | Phase 2 | Complete |
+| CTX-01 | Phase 3 | Complete |
+| CTX-02 | Phase 3 | Complete |
 | REV-01 | Phase 5 | Pending |
 | REV-02 | Phase 5 | Pending |
 | REV-03 | Phase 5 | Pending |
