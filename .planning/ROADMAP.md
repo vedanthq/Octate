@@ -73,8 +73,14 @@ Plans:
   3. Context Engine ranks candidates (changed symbols=100, direct callers/callees=90, related types/tests=80, architecture rules=70, config=60, Git history=40) and produces a bounded `ReviewContext` within token budgets (e.g., 8k–16k max)
   4. Context serialization clearly separates trusted sections (system policy, Octate rules, review task, repository metadata, diff, diagnostics) from untrusted repository source content
   5. Token budgeting metrics are tracked: candidate tokens, selected tokens, selection ratio
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: no
+
+Plans:
+- [ ] 03-01-PLAN.md — Symbol Index & Cross-File Path Resolution (PARSE-03)
+- [ ] 03-02-PLAN.md — Reference Graph & Dependency Graph with Disk Serialization (PARSE-03, PARSE-04)
+- [ ] 03-03-PLAN.md — Context Engine, Token Budgeting & Snippet Windowing (CTX-01)
+- [ ] 03-04-PLAN.md — Prompt Context Serialization & Trust Demarcation (CTX-02, MODEL-04)
 
 ### Phase 4: Model Provider
 **Goal**: NVIDIA Nemotron 3 Ultra is callable via clean abstraction with schema-validated, prompt-injection-protected output.
