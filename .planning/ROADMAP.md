@@ -161,7 +161,17 @@ Plans:
   4. False-positive rate measured and tracked; target: useful findings / total findings > 0.7
   5. Performance measured and documented: review latency, context size, NVIDIA provider reliability, indexing speed, TUI responsiveness
   6. Documentation covers installation (`npx octate review`), configuration (`octate.yaml`), usage, architecture, and troubleshooting
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+- [ ] 08-01-PLAN.md — Doctor Diagnostics & CLI Hardening (CONF-01, REPO-01, ANAL-01, PARSE-01, MODEL-01)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 08-02-PLAN.md — Golden Review Testbed & Negative Pairing (REV-01, REV-02, REV-03, REV-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 08-03-PLAN.md — Packaging, Benchmarking & Documentation (OUT-01, OUT-02, CONF-02, CACHE-01..03, TUI-01..03)
 **UI hint**: yes
 
 ---
@@ -177,7 +187,7 @@ Plans:
 | 5. Review Engine | 3/3 | Complete | 2026-09-10 |
 | 6. Application Layer | 3/3 | Complete | 2026-09-11 |
 | 7. Terminal Presentation | 3/3 | Complete | 2026-09-11 |
-| 8. CLI Integration, Polish & Evaluation | 0/0 | Not started | - |
+| 8. CLI Integration, Polish & Evaluation | 0/3 | In progress | - |
 
 ---
 
