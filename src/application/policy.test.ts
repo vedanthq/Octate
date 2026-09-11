@@ -6,13 +6,12 @@ import { describe, expect, it } from '@jest/globals';
 import type { ReviewSeverity } from '../review/types.js';
 import { createMockFinding, createMockReviewResult } from './__tests__/mocks.js';
 import {
-  SEVERITY_LEVELS,
   countBlockingFindings,
   evaluateExitCode,
   formatFailureBanner,
   isBlockingFinding,
+  SEVERITY_LEVELS,
 } from './policy.js';
-import type { ReviewFailOnSeverity } from './types.js';
 
 describe('application:policy', () => {
   describe('SEVERITY_LEVELS', () => {

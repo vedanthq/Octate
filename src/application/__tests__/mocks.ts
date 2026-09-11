@@ -3,7 +3,12 @@
  */
 
 import type { ModelRequest, ModelResponse, ReviewModel } from '../../model/types.js';
-import type { FindingCategory, RankedFinding, ReviewResult, ReviewSeverity } from '../../review/types.js';
+import type {
+  FindingCategory,
+  RankedFinding,
+  ReviewResult,
+  ReviewSeverity,
+} from '../../review/types.js';
 
 /**
  * Creates a valid RankedFinding fixture for testing.
@@ -126,10 +131,7 @@ export class MockReviewModel implements ReviewModel {
   /**
    * Registers a handler for requests matching a keyword or role substring.
    */
-  public setHandler(
-    keyword: string,
-    handler: (req: ModelRequest) => Promise<ModelResponse>
-  ): void {
+  public setHandler(keyword: string, handler: (req: ModelRequest) => Promise<ModelResponse>): void {
     this.handlers.set(keyword.toLowerCase(), handler);
   }
 
