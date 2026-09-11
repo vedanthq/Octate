@@ -179,7 +179,7 @@ async function getStagedFiles(repoRoot: string): Promise<FileChange[]> {
       }
 
       if (status) {
-        changes.push({ path: filepath, status, staged: true });
+        changes.push({ path: filepath, status });
       }
     }
   }
@@ -210,14 +210,14 @@ async function getWorkingFiles(repoRoot: string): Promise<FileChange[]> {
       let status: FileChange['status'] | undefined;
       if (stage === 0 && workdir === 2) {
         status = 'added';
-      } else if ((workdir === 2 || workdir === 3) && stage !== 0) {
+      } else if (((workdir as number) === 2 || (workdir as number) === 3) && stage !== 0) {
         status = 'modified';
       } else if (workdir === 0 && stage !== 0) {
         status = 'deleted';
       }
 
       if (status) {
-        changes.push({ path: filepath, status, staged: false });
+        changes.push({ path: filepath, status });
       }
     }
   }

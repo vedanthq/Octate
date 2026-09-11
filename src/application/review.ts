@@ -22,11 +22,7 @@ import { findGitRoot } from '../repository/discovery.js';
 import { resolveScope, type ScopeOptions } from '../repository/scope.js';
 import { createReviewEngine } from '../review/engine.js';
 import type { ReviewResult } from '../review/types.js';
-import type {
-  CanonicalReviewStage,
-  ReviewProgressStatus,
-  ReviewUseCaseOptions,
-} from './types.js';
+import type { CanonicalReviewStage, ReviewProgressStatus, ReviewUseCaseOptions } from './types.js';
 
 const logger = createLogger('application:review');
 
@@ -146,7 +142,7 @@ export class ReviewUseCase {
     // Stage 2: index:update (Step 2/8) — Decoupled AST parse & symbols
     emit('index:update', 'start', 'Updating cache & AST parse trees', 2);
     signal?.throwIfAborted();
-    const parseResult = await parseFiles(validFiles, { signal });
+    const parseResult = await parseFiles(validFiles, signal ? { signal } : {});
     const allSymbols: AnalysisSymbol[] = [];
     for (const parsedFile of parseResult.files) {
       try {
@@ -186,12 +182,7 @@ export class ReviewUseCase {
       diagnostics: [],
     };
     try {
-      diagnosticsResult = await collectDiagnostics(
-        parsedFilePaths,
-        repoRoot,
-        languages,
-        signal
-      );
+      diagnosticsResult = await collectDiagnostics(parsedFilePaths, repoRoot, languages, signal);
     } catch (error) {
       logger.warn({ error }, 'Diagnostic collection failed, continuing pipeline');
     }
@@ -215,9 +206,15 @@ export class ReviewUseCase {
       diagnostics: diagnosticsResult.diagnostics,
       readFile: async (file: string) => fileContents.get(file) ?? '',
     });
-    emit('context:build', 'complete', `Context assembled (${reviewContext.totalTokens} tokens)`, 5, {
-      totalTokens: reviewContext.totalTokens,
-    });
+    emit(
+      'context:build',
+      'complete',
+      `Context assembled (${reviewContext.totalTokens} tokens)`,
+      5,
+      {
+        totalTokens: reviewContext.totalTokens,
+      }
+    );
 
     // Stages 6-8: review:dag, review:critic, review:rank (Steps 6-8/8)
     signal?.throwIfAborted();
@@ -235,7 +232,9 @@ export class ReviewUseCase {
       model,
       config: config.review,
       signal,
-      onProgress: options.onProgress,
+      onProgress: options.onProgress
+        ? (e) => options.onProgress?.(e as unknown as import('./types.js').ReviewProgressEvent)
+        : undefined,
       scopeMetadata: {
         scopeType: scope.type,
         base: scope.base,

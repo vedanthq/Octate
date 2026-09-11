@@ -6,10 +6,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import * as git from 'isomorphic-git';
-import {
-  createTestFinding,
-  MockReviewModel,
-} from '../review/__tests__/mocks.js';
+import { createTestFinding, MockReviewModel } from '../review/__tests__/mocks.js';
 import { createReviewUseCase, ReviewUseCase } from './review.js';
 import type { CanonicalReviewStage, ReviewProgressEvent } from './types.js';
 
@@ -120,8 +117,7 @@ describe('application:review', () => {
       'review:rank',
     ];
 
-    for (let i = 0; i < expectedStages.length; i++) {
-      const stage = expectedStages[i]!;
+    for (const [i, stage] of expectedStages.entries()) {
       const startEvent = events.find((e) => e.stage === stage && e.status === 'start');
       const completeEvent = events.find((e) => e.stage === stage && e.status === 'complete');
 

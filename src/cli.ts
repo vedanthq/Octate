@@ -72,6 +72,16 @@ function _setupLogger(options: GlobalOptions): void {
  * Handles errors and exits with appropriate code.
  */
 function handleError(error: unknown): never {
+  // Handle cancellation (Ctrl+C / SIGINT)
+  if (
+    error instanceof Error &&
+    (error.name === 'AbortError' ||
+      error.message.includes('cancelled') ||
+      error.message.includes('Aborted'))
+  ) {
+    process.exit(130);
+  }
+
   if (isOctateError(error)) {
     logger.error({ error: error.message, context: error.context }, 'Command failed');
     // biome-ignore lint/suspicious/noConsole: CLI user output
@@ -110,7 +120,7 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<numb
       return 0;
     }
 
-    return 0;
+    return typeof process.exitCode === 'number' ? process.exitCode : 0;
   } catch (error) {
     handleError(error);
     // TypeScript doesn't know handleError never returns
