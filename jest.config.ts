@@ -4,12 +4,12 @@ const config: Config = {
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
-  testMatch: ['**/*.test.ts'],
+  testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.test.ts', '!src/cli.ts'],
+  collectCoverageFrom: ['src/**/*.ts', 'src/**/*.tsx', '!src/**/*.test.ts', '!src/**/*.test.tsx', '!src/cli.ts'],
   coverageDirectory: 'coverage',
   verbose: true,
   transform: {
@@ -18,7 +18,7 @@ const config: Config = {
       useESM: true,
     }],
   },
-  extensionsToTreatAsEsm: ['.ts'],
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
   globals: {
     'ts-jest': {
       useESM: true,
@@ -29,7 +29,7 @@ const config: Config = {
     vmModules: true,
   },
   // Ensure we're using the right module system
-  moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
 };
 
 export default config;
