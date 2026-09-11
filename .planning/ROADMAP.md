@@ -171,7 +171,7 @@ Plans:
 | 4. Model Provider | 3/3 | Complete | 2026-09-10 |
 | 5. Review Engine | 3/3 | Complete | 2026-09-10 |
 | 6. Application Layer | 3/3 | Complete | 2026-09-11 |
-| 7. Terminal Presentation | 1/3 | In progress | - |
+| 7. Terminal Presentation | 2/3 | In progress | - |
 | 8. CLI Integration, Polish & Evaluation | 0/0 | Not started | - |
 
 ---
