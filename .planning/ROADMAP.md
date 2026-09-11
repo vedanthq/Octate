@@ -127,7 +127,7 @@ Plans:
   3. Ctrl+C propagates cancellation through all layers (model requests via AbortController, analysis subprocesses via signal, indexing, background tasks) — no orphaned processes
   4. Exit codes map correctly: 0=review passed, 1=review completed with blocking findings, 2=usage/configuration error, 3=repository/Git error, 4=model/provider error, 5=internal error
   5. Errors are typed (ConfigurationError, RepositoryError, GitError, ParseError, AnalysisError, ContextError, ModelError, ProviderRateLimitError, ProviderTimeoutError, AuthenticationError, QuotaExceededError, ValidationError) with human-concise messages; debug mode provides diagnostic detail
-**Plans**: TBD
+**Plans**: 3 plans (06-01: Domain Contracts & Policy, 06-02: Pluggable Renderers, 06-03: Pipeline & CLI)
 **UI hint**: no
 
 ### Phase 7: Terminal Presentation
