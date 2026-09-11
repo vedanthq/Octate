@@ -1,9 +1,9 @@
 ---
 phase: 6
 slug: application-layer
-status: draft
+status: verified
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-09-11
 ---
 
@@ -38,13 +38,13 @@ created: 2026-09-11
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 06-01-01 | 01 | 1 | OUT-02 | T-06-01 | Accurate threshold evaluation without false passes | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/application/policy.test.ts` | ❌ W0 | ⬜ pending |
-| 06-01-02 | 01 | 1 | OUT-02 | T-06-02 | Clean stderr progress without polluting stdout | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/application/progress.test.ts` | ❌ W0 | ⬜ pending |
-| 06-02-01 | 02 | 2 | OUT-02 | T-06-03 | Strict SARIF v2.1.0 and JSON schema hygiene | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/renderers/json.test.ts src/renderers/sarif.test.ts` | ❌ W0 | ⬜ pending |
-| 06-02-02 | 02 | 2 | OUT-02 | T-06-04 | Ultra-compact quiet output and safe file writing | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/renderers/quiet.test.ts src/renderers/console.test.ts` | ❌ W0 | ⬜ pending |
-| 06-03-01 | 03 | 3 | OUT-02 | T-06-05 | Scope listing without empty file sets or crashes | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/repository/scope.test.ts` | ❌ W0 | ⬜ pending |
-| 06-03-02 | 03 | 3 | OUT-02 | T-06-06 | Full pipeline orchestration and cancellation | integration | `NODE_OPTIONS=--experimental-vm-modules npx jest src/application/review.test.ts` | ❌ W0 | ⬜ pending |
-| 06-03-03 | 03 | 3 | OUT-02 | T-06-07 | Deterministic exit code resolution (0..5, 130) | integration | `NODE_OPTIONS=--experimental-vm-modules npx jest src/commands/review.test.ts` | ❌ W0 | ⬜ pending |
+| 06-01-01 | 01 | 1 | OUT-02 | T-06-01 | Accurate threshold evaluation without false passes | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/application/policy.test.ts` | ✅ | ✅ green |
+| 06-01-02 | 01 | 1 | OUT-02 | T-06-02 | Clean stderr progress without polluting stdout | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/application/progress.test.ts` | ✅ | ✅ green |
+| 06-02-01 | 02 | 2 | OUT-02 | T-06-03 | Strict SARIF v2.1.0 and JSON schema hygiene | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/renderers/json.test.ts src/renderers/sarif.test.ts` | ✅ | ✅ green |
+| 06-02-02 | 02 | 2 | OUT-02 | T-06-04 | Ultra-compact quiet output and safe file writing | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/renderers/quiet.test.ts src/renderers/console.test.ts` | ✅ | ✅ green |
+| 06-03-01 | 03 | 3 | OUT-02 | T-06-05 | Scope listing without empty file sets or crashes | unit | `NODE_OPTIONS=--experimental-vm-modules npx jest src/repository/scope.test.ts` | ✅ | ✅ green |
+| 06-03-02 | 03 | 3 | OUT-02 | T-06-06 | Full pipeline orchestration and cancellation | integration | `NODE_OPTIONS=--experimental-vm-modules npx jest src/application/review.test.ts` | ✅ | ✅ green |
+| 06-03-03 | 03 | 3 | OUT-02 | T-06-07 | Deterministic exit code resolution (0..5, 130) | integration | `NODE_OPTIONS=--experimental-vm-modules npx jest src/commands/review.test.ts` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,8 +52,8 @@ created: 2026-09-11
 
 ## Wave 0 Requirements
 
-- [ ] Staging and mock utilities for `ReviewUseCase` testing in `src/application/__tests__/mocks.ts`
-- [ ] Test fixtures covering `ReviewResult` domain object rendering across JSON, SARIF, Quiet, and Console
+- [x] Staging and mock utilities for `ReviewUseCase` testing in `src/application/__tests__/mocks.ts`
+- [x] Test fixtures covering `ReviewResult` domain object rendering across JSON, SARIF, Quiet, and Console
 
 ---
 

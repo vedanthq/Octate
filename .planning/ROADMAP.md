@@ -15,7 +15,7 @@
 - [x] **Phase 3: Intelligence Layer** — Symbol index, reference/dependency graphs, Context Engine with token budgeting
 - [x] **Phase 4: Model Provider** — NVIDIA adapter, versioned prompts, schema validation, prompt injection protection
 - [x] **Phase 5: Review Engine** — Review DAG (Structural/Semantic/Security reviewers → Critic → Dedup → Ranking)
-- [ ] **Phase 6: Application Layer** — ReviewUseCase orchestration, progress streaming, cancellation, exit codes
+- [x] **Phase 6: Application Layer** — ReviewUseCase orchestration, progress streaming, cancellation, exit codes
 - [ ] **Phase 7: Terminal Presentation** — Interactive TUI workspace, JSON/SARIF/quiet renderers
 - [ ] **Phase 8: CLI Integration, Polish & Evaluation** — Full command set, doctor, evaluation fixtures, performance validation
 
@@ -168,9 +168,9 @@ Plans:
 | 1. Foundation & Repository Layer | 7/7 | Complete | 2026-09-09 |
 | 2. Analysis Layer | 2/2 | Complete | 2026-09-09 |
 | 3. Intelligence Layer | 4/4 | Complete | 2026-09-10 |
-| 4. Model Provider | 0/0 | Not started | - |
-| 5. Review Engine | 0/0 | Not started | - |
-| 6. Application Layer | 0/0 | Not started | - |
+| 4. Model Provider | 3/3 | Complete | 2026-09-10 |
+| 5. Review Engine | 3/3 | Complete | 2026-09-10 |
+| 6. Application Layer | 3/3 | Complete | 2026-09-11 |
 | 7. Terminal Presentation | 0/0 | Not started | - |
 | 8. CLI Integration, Polish & Evaluation | 0/0 | Not started | - |
 
@@ -192,19 +192,19 @@ Plans:
 | ANAL-02 | Phase 2 | Complete |
 | CTX-01 | Phase 3 | Complete |
 | CTX-02 | Phase 3 | Complete |
-| REV-01 | Phase 5 | Pending |
-| REV-02 | Phase 5 | Pending |
-| REV-03 | Phase 5 | Pending |
-| REV-04 | Phase 5 | Pending |
-| MODEL-01 | Phase 4 | Pending |
+| REV-01 | Phase 5 | Complete |
+| REV-02 | Phase 5 | Complete |
+| REV-03 | Phase 5 | Complete |
+| REV-04 | Phase 5 | Complete |
+| MODEL-01 | Phase 4 | Complete |
 | MODEL-02 | Phase 1 | Complete |
-| MODEL-03 | Phase 4 | Pending |
-| MODEL-04 | Phase 4 | Pending |
+| MODEL-03 | Phase 4 | Complete |
+| MODEL-04 | Phase 4 | Complete |
 | TUI-01 | Phase 7 | Pending |
 | TUI-02 | Phase 7 | Pending |
 | TUI-03 | Phase 7 | Pending |
 | OUT-01 | Phase 7 | Pending |
-| OUT-02 | Phase 6 | Pending |
+| OUT-02 | Phase 6 | Complete |
 | CONF-01 | Phase 1 | Complete |
 | CONF-02 | Phase 1 | Complete |
 | CACHE-01 | Phase 1 | Complete |
