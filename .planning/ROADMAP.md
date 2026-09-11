@@ -142,7 +142,12 @@ Plans:
   5. `--sarif` output produces valid SARIF v2.1.0 that passes schema validation via SarifRenderer
   6. `--quiet` output produces minimal human-readable summary via HumanRenderer
   7. All four renderers (InteractiveRenderer, HumanRenderer, JsonRenderer, SarifRenderer) transform the same `ReviewResult` — review engine has zero knowledge of rendering
-**Plans**: 3 plans (07-01: Foundation & Lifecycle, 07-02: State Machine & Components, 07-03: Interactive Renderer & CLI)
+**Plans**: 3 plans
+
+Plans:
+- [x] 07-01-PLAN.md — Foundation & Lifecycle (TUI-01, TUI-02, TUI-03)
+- [x] 07-02-PLAN.md — State Machine & Components (TUI-01, TUI-02, TUI-03)
+- [x] 07-03-PLAN.md — Interactive Renderer & CLI (TUI-01, TUI-02, TUI-03, OUT-01)
 **UI hint**: yes
 
 ### Phase 8: CLI Integration, Polish & Evaluation
@@ -171,7 +176,7 @@ Plans:
 | 4. Model Provider | 3/3 | Complete | 2026-09-10 |
 | 5. Review Engine | 3/3 | Complete | 2026-09-10 |
 | 6. Application Layer | 3/3 | Complete | 2026-09-11 |
-| 7. Terminal Presentation | 2/3 | In progress | - |
+| 7. Terminal Presentation | 3/3 | Complete | 2026-09-11 |
 | 8. CLI Integration, Polish & Evaluation | 0/0 | Not started | - |
 
 ---
