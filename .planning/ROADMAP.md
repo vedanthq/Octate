@@ -142,7 +142,7 @@ Plans:
   5. `--sarif` output produces valid SARIF v2.1.0 that passes schema validation via SarifRenderer
   6. `--quiet` output produces minimal human-readable summary via HumanRenderer
   7. All four renderers (InteractiveRenderer, HumanRenderer, JsonRenderer, SarifRenderer) transform the same `ReviewResult` — review engine has zero knowledge of rendering
-**Plans**: TBD
+**Plans**: 3 plans (07-01: Foundation & Lifecycle, 07-02: State Machine & Components, 07-03: Interactive Renderer & CLI)
 **UI hint**: yes
 
 ### Phase 8: CLI Integration, Polish & Evaluation
