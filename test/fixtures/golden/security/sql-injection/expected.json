@@ -1,0 +1,14 @@
+{
+  "id": "sec-sql-injection",
+  "category": "security",
+  "expectedSeverity": "critical",
+  "targetFile": "src/db/users.ts",
+  "lineRange": {
+    "start": 12,
+    "end": 16
+  },
+  "minConfidence": 0.85,
+  "titleContains": "SQL",
+  "negativeVariantFile": "clean.ts",
+  "expectedNegativeFindings": 0
+}

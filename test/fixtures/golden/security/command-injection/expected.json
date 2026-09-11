@@ -1,0 +1,14 @@
+{
+  "id": "sec-command-injection",
+  "category": "security",
+  "expectedSeverity": "critical",
+  "targetFile": "scripts/reporter.py",
+  "lineRange": {
+    "start": 10,
+    "end": 14
+  },
+  "minConfidence": 0.85,
+  "titleContains": "Command",
+  "negativeVariantFile": "clean.py",
+  "expectedNegativeFindings": 0
+}

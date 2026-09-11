@@ -1,0 +1,14 @@
+{
+  "id": "sem-logic-regression",
+  "category": "correctness",
+  "expectedSeverity": "high",
+  "targetFile": "src/billing/pricing.ts",
+  "lineRange": {
+    "start": 20,
+    "end": 25
+  },
+  "minConfidence": 0.75,
+  "titleContains": "logic",
+  "negativeVariantFile": "clean.ts",
+  "expectedNegativeFindings": 0
+}

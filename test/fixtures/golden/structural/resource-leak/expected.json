@@ -1,0 +1,14 @@
+{
+  "id": "struct-resource-leak",
+  "category": "reliability",
+  "expectedSeverity": "high",
+  "targetFile": "src/io/reader.ts",
+  "lineRange": {
+    "start": 8,
+    "end": 15
+  },
+  "minConfidence": 0.8,
+  "titleContains": "resource",
+  "negativeVariantFile": "clean.ts",
+  "expectedNegativeFindings": 0
+}
