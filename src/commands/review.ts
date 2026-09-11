@@ -15,8 +15,10 @@ import { loadConfig } from '../config/merger.js';
 import { ConfigurationError, GitError } from '../errors/index.js';
 import { createLogger } from '../logging/index.js';
 import { createRenderer, type OutputFormat } from '../renderers/index.js';
+import { InteractiveTuiRenderer } from '../renderers/tui/renderer.js';
+import { shouldUseTui } from '../renderers/tui/terminal.js';
 import { findGitRoot } from '../repository/discovery.js';
-import { parseRange, resolveScope, type ScopeOptions } from '../repository/scope.js';
+import { parseRange, type resolveScope, type ScopeOptions } from '../repository/scope.js';
 import type { ReviewResult } from '../review/types.js';
 
 const logger = createLogger('commands:review');
@@ -152,7 +154,7 @@ export function getScopeOptions(
 /**
  * Main review execution function.
  */
-async function runReview(
+export async function runReview(
   controller: CancellationController,
   refs: string[],
   options: ReviewOptions
@@ -180,7 +182,9 @@ async function runReview(
     const cwd = process.cwd();
     const repoRoot = await findGitRoot(cwd);
     if (!repoRoot) {
-      throw new GitError('Not a Git repository (or any parent directory)', { cwd });
+      throw new GitError('Not a Git repository (or any parent directory)', {
+        cwd,
+      });
     }
 
     logger.info({ repoRoot, refs, options }, 'Starting review');
@@ -200,24 +204,17 @@ async function runReview(
     // Resolve review scope options
     const scopeOptions = getScopeOptions(options, refs, repoRoot);
 
-    const reporter = new StderrProgressReporter({
-      quiet: options.quiet,
+    const isInteractiveTui = shouldUseTui({
+      isTTY: Boolean(process.stdout.isTTY),
+      ci: Boolean(process.env.CI),
+      term: process.env.TERM,
+      plain: false,
+      noTui: options.tui === false,
       json: options.json,
       sarif: options.sarif,
+      quiet: options.quiet,
+      outputFile: options.output,
     });
-
-    const useCase = createReviewUseCase();
-
-    const result = await useCase.execute({
-      repoRoot,
-      scopeOptions,
-      refs,
-      config,
-      signal: controller.signal,
-      onProgress: reporter.report,
-    });
-
-    reporter.clear();
 
     const format: OutputFormat = options.json
       ? 'json'
@@ -225,25 +222,86 @@ async function runReview(
         ? 'sarif'
         : options.quiet
           ? 'quiet'
-          : 'console';
+          : isInteractiveTui
+            ? 'tui'
+            : 'console';
 
-    const renderer = createRenderer(format, {
-      outputFile: options.output,
-      color: options.color,
-    });
+    const useCase = createReviewUseCase();
 
-    await renderer.render(result);
+    if (isInteractiveTui) {
+      const effectiveFailOn: ReviewFailOnSeverity =
+        options.failOn ?? config.review.failOnSeverity ?? 'critical';
 
-    // Evaluate exit code policy
-    const threshold: ReviewFailOnSeverity =
-      options.failOn ?? config.review.failOnSeverity ?? 'critical';
-    const blockingCount = countBlockingFindings(result.findings, threshold);
+      const tuiRenderer = new InteractiveTuiRenderer({
+        repoRoot,
+        scopeType: options.staged ? 'staged' : refs.length > 0 ? 'ref' : 'workspace',
+        failOn: effectiveFailOn,
+        onReReview: async () => {
+          const freshResult = await useCase.execute({
+            repoRoot,
+            scopeOptions,
+            refs,
+            config,
+            signal: controller.signal,
+            onProgress: (event) => tuiRenderer.dispatchProgress(event),
+          });
+          tuiRenderer.dispatchResult(freshResult);
+        },
+      });
 
-    if (blockingCount > 0) {
-      process.stderr.write(formatFailureBanner(blockingCount, threshold));
-      process.exitCode = 1;
+      tuiRenderer.start();
+
+      try {
+        const result = await useCase.execute({
+          repoRoot,
+          scopeOptions,
+          refs,
+          config,
+          signal: controller.signal,
+          onProgress: (event) => tuiRenderer.dispatchProgress(event),
+        });
+
+        await tuiRenderer.render(result);
+      } catch (error) {
+        tuiRenderer.exit();
+        throw error;
+      }
     } else {
-      process.exitCode = 0;
+      const reporter = new StderrProgressReporter({
+        quiet: options.quiet,
+        json: options.json,
+        sarif: options.sarif,
+      });
+
+      const result = await useCase.execute({
+        repoRoot,
+        scopeOptions,
+        refs,
+        config,
+        signal: controller.signal,
+        onProgress: reporter.report,
+      });
+
+      reporter.clear();
+
+      const renderer = createRenderer(format, {
+        outputFile: options.output,
+        color: options.color,
+      });
+
+      await renderer.render(result);
+
+      // Evaluate exit code policy
+      const threshold: ReviewFailOnSeverity =
+        options.failOn ?? config.review.failOnSeverity ?? 'critical';
+      const blockingCount = countBlockingFindings(result.findings, threshold);
+
+      if (blockingCount > 0) {
+        process.stderr.write(formatFailureBanner(blockingCount, threshold));
+        process.exitCode = 1;
+      } else {
+        process.exitCode = 0;
+      }
     }
   } catch (error) {
     controller.abort(error instanceof Error ? error : new Error(String(error)));
@@ -265,12 +323,8 @@ export async function executeReview(
   modelOverride?: import('../model/index.js').ReviewModelInterface
 ): Promise<ReviewResult> {
   const { analyzeFiles } = await import('../analysis/orchestrator.js');
-  const {
-    createContextEngine,
-    createPathResolver,
-    createReferenceGraph,
-    createSymbolIndex,
-  } = await import('../intelligence/index.js');
+  const { createContextEngine, createPathResolver, createReferenceGraph, createSymbolIndex } =
+    await import('../intelligence/index.js');
   const { LocalNvidiaProvider } = await import('../model/index.js');
   const { createReviewEngine } = await import('../review/index.js');
 
@@ -309,7 +363,9 @@ export async function executeReview(
     diagnostics: analysis.diagnostics,
     readFile: async (file: string) => {
       const existing = fileContents.get(file);
-      if (existing !== undefined) return existing;
+      if (existing !== undefined) {
+        return existing;
+      }
       try {
         const c = await readFile(`${repoRoot}/${file}`, 'utf-8');
         fileContents.set(file, c);

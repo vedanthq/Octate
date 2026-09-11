@@ -8,17 +8,27 @@ import {
   evaluateExitCode,
   formatFailureBanner,
 } from '../application/policy.js';
+import { ReviewUseCase } from '../application/review.js';
+import { createCancellationController } from '../cancellation/index.js';
 import { ConfigurationError } from '../errors/index.js';
+import { ConsoleRenderer } from '../renderers/console.js';
+import { JsonRenderer } from '../renderers/json.js';
+import { QuietRenderer } from '../renderers/quiet.js';
+import { SarifRenderer } from '../renderers/sarif.js';
+import { InteractiveTuiRenderer } from '../renderers/tui/renderer.js';
 import type { RankedFinding, ReviewResult } from '../review/types.js';
 import {
   createReviewCommand,
   executeReview,
   getScopeOptions,
+  runReview,
   validateOutputMode,
   validateScope,
 } from './review.js';
 
-function createMockFinding(severity: 'critical' | 'high' | 'medium' | 'low' | 'info'): RankedFinding {
+function createMockFinding(
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info'
+): RankedFinding {
   return {
     id: 'mock-id',
     title: 'Security Vulnerability',
@@ -50,6 +60,49 @@ function createMockFinding(severity: 'critical' | 'high' | 'medium' | 'low' | 'i
   };
 }
 
+function createMockResult(findings: RankedFinding[]): ReviewResult {
+  return {
+    summary: {
+      totalFindings: findings.length,
+      bySeverity: {
+        critical: findings.filter((f) => f.severity === 'critical').length,
+        high: findings.filter((f) => f.severity === 'high').length,
+        medium: findings.filter((f) => f.severity === 'medium').length,
+        low: findings.filter((f) => f.severity === 'low').length,
+        info: findings.filter((f) => f.severity === 'info').length,
+      },
+      byCategory: {
+        correctness: 0,
+        security: findings.length,
+        performance: 0,
+        architecture: 0,
+        reliability: 0,
+        maintainability: 0,
+        compatibility: 0,
+        testing: 0,
+      },
+      byReviewer: {},
+      filesAnalyzed: 1,
+      durationMs: 50,
+    },
+    findings,
+    metadata: {
+      scopeType: 'working-tree',
+      timestamp: new Date().toISOString(),
+      version: '0.1.0',
+      model: 'test-model',
+      totalTokens: 100,
+      promptTokens: 50,
+      completionTokens: 50,
+      warnings: [],
+      reviewersTriggered: ['security'],
+      criticInvoked: true,
+      preCriticFindingCount: findings.length,
+      postCriticFindingCount: findings.length,
+    },
+  };
+}
+
 describe('commands:review', () => {
   let command: ReturnType<typeof createReviewCommand>;
 
@@ -74,9 +127,7 @@ describe('commands:review', () => {
       expect(options).toContain('-c, --commit <ref>');
       expect(options).toContain('-r, --range <range>');
       expect(options).toContain('--branch <branch>');
-      expect(options).toContain(
-        '--fail-on <severity>'
-      );
+      expect(options).toContain('--fail-on <severity>');
       expect(options).toContain('-j, --json');
       expect(options).toContain('--sarif');
       expect(options).toContain('-q, --quiet');
@@ -195,49 +246,6 @@ describe('commands:review', () => {
   });
 
   describe('exit code and policy evaluation', () => {
-    function createMockResult(findings: RankedFinding[]): ReviewResult {
-      return {
-        summary: {
-          totalFindings: findings.length,
-          bySeverity: {
-            critical: findings.filter((f) => f.severity === 'critical').length,
-            high: findings.filter((f) => f.severity === 'high').length,
-            medium: findings.filter((f) => f.severity === 'medium').length,
-            low: findings.filter((f) => f.severity === 'low').length,
-            info: findings.filter((f) => f.severity === 'info').length,
-          },
-          byCategory: {
-            correctness: 0,
-            security: findings.length,
-            performance: 0,
-            architecture: 0,
-            reliability: 0,
-            maintainability: 0,
-            compatibility: 0,
-            testing: 0,
-          },
-          byReviewer: {},
-          filesAnalyzed: 1,
-          durationMs: 50,
-        },
-        findings,
-        metadata: {
-          scopeType: 'working-tree',
-          timestamp: new Date().toISOString(),
-          version: '0.1.0',
-          model: 'test-model',
-          totalTokens: 100,
-          promptTokens: 50,
-          completionTokens: 50,
-          warnings: [],
-          reviewersTriggered: ['security'],
-          criticInvoked: true,
-          preCriticFindingCount: findings.length,
-          postCriticFindingCount: findings.length,
-        },
-      };
-    }
-
     it('sets exit code 1 and produces failure banner when finding meets threshold', () => {
       const result = createMockResult([createMockFinding('critical')]);
       const exitCode = evaluateExitCode(result, 'critical');
@@ -300,6 +308,210 @@ describe('commands:review', () => {
       expect(result.findings).toEqual([]);
       expect(result.metadata.scopeType).toBe('working-tree');
       expect(result.metadata.version).toBe('0.1.0');
+    });
+  });
+
+  describe('runReview routing and execution', () => {
+    let origIsTTY: boolean | undefined;
+    let origCI: string | undefined;
+    let origTerm: string | undefined;
+    let origExitCode: string | number | null | undefined;
+
+    let executeSpy: jest.SpiedFunction<typeof ReviewUseCase.prototype.execute>;
+    let tuiStartSpy: jest.SpiedFunction<typeof InteractiveTuiRenderer.prototype.start>;
+    let tuiRenderSpy: jest.SpiedFunction<typeof InteractiveTuiRenderer.prototype.render>;
+    let tuiExitSpy: jest.SpiedFunction<typeof InteractiveTuiRenderer.prototype.exit>;
+    let consoleRenderSpy: jest.SpiedFunction<typeof ConsoleRenderer.prototype.render>;
+    let jsonRenderSpy: jest.SpiedFunction<typeof JsonRenderer.prototype.render>;
+    let sarifRenderSpy: jest.SpiedFunction<typeof SarifRenderer.prototype.render>;
+    let quietRenderSpy: jest.SpiedFunction<typeof QuietRenderer.prototype.render>;
+
+    beforeEach(() => {
+      origIsTTY = process.stdout.isTTY;
+      origCI = process.env.CI;
+      origTerm = process.env.TERM;
+      origExitCode = process.exitCode;
+      process.exitCode = undefined;
+
+      executeSpy = jest
+        .spyOn(ReviewUseCase.prototype, 'execute')
+        .mockResolvedValue(createMockResult([]));
+      tuiStartSpy = jest.spyOn(InteractiveTuiRenderer.prototype, 'start').mockImplementation(() => {
+        /* noop */
+      });
+      tuiRenderSpy = jest
+        .spyOn(InteractiveTuiRenderer.prototype, 'render')
+        .mockResolvedValue(undefined);
+      tuiExitSpy = jest.spyOn(InteractiveTuiRenderer.prototype, 'exit').mockImplementation(() => {
+        /* noop */
+      });
+      consoleRenderSpy = jest
+        .spyOn(ConsoleRenderer.prototype, 'render')
+        .mockResolvedValue(undefined);
+      jsonRenderSpy = jest.spyOn(JsonRenderer.prototype, 'render').mockResolvedValue(undefined);
+      sarifRenderSpy = jest.spyOn(SarifRenderer.prototype, 'render').mockResolvedValue(undefined);
+      quietRenderSpy = jest.spyOn(QuietRenderer.prototype, 'render').mockResolvedValue(undefined);
+      jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: origIsTTY,
+        configurable: true,
+      });
+      if (origCI !== undefined) {
+        process.env.CI = origCI;
+      } else {
+        delete process.env.CI;
+      }
+      if (origTerm !== undefined) {
+        process.env.TERM = origTerm;
+      } else {
+        delete process.env.TERM;
+      }
+      process.exitCode = origExitCode;
+      jest.restoreAllMocks();
+    });
+
+    it('selects TUI renderer when stdout is TTY, not CI, and no automation flags', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'xterm-256color';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], {});
+
+      expect(tuiStartSpy).toHaveBeenCalledTimes(1);
+      expect(tuiRenderSpy).toHaveBeenCalledTimes(1);
+      expect(consoleRenderSpy).not.toHaveBeenCalled();
+    });
+
+    it('selects console renderer when --no-tui is specified', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'xterm-256color';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], { tui: false });
+
+      expect(tuiStartSpy).not.toHaveBeenCalled();
+      expect(consoleRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects console renderer when process.env.CI is true', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      process.env.CI = 'true';
+      process.env.TERM = 'xterm-256color';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], {});
+
+      expect(tuiStartSpy).not.toHaveBeenCalled();
+      expect(consoleRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects console renderer when process.env.TERM is dumb', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'dumb';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], {});
+
+      expect(tuiStartSpy).not.toHaveBeenCalled();
+      expect(consoleRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects json renderer when --json is specified', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'xterm-256color';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], { json: true });
+
+      expect(tuiStartSpy).not.toHaveBeenCalled();
+      expect(jsonRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects sarif renderer when --sarif is specified', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'xterm-256color';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], { sarif: true });
+
+      expect(tuiStartSpy).not.toHaveBeenCalled();
+      expect(sarifRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('selects quiet renderer when --quiet is specified', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'xterm-256color';
+
+      const controller = createCancellationController();
+      await runReview(controller, [], { quiet: true });
+
+      expect(tuiStartSpy).not.toHaveBeenCalled();
+      expect(quietRenderSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('sets exit code 0 when clean in non-TUI mode', async () => {
+      executeSpy.mockResolvedValue(createMockResult([]));
+
+      const controller = createCancellationController();
+      await runReview(controller, [], { tui: false });
+
+      expect(process.exitCode).toBe(0);
+    });
+
+    it('sets exit code 1 and writes failure banner when blocking findings exist in non-TUI mode', async () => {
+      executeSpy.mockResolvedValue(createMockResult([createMockFinding('critical')]));
+
+      const controller = createCancellationController();
+      await runReview(controller, [], { tui: false, failOn: 'critical' });
+
+      expect(process.exitCode).toBe(1);
+    });
+
+    it('calls tuiRenderer.exit() when useCase.execute throws in TUI mode', async () => {
+      Object.defineProperty(process.stdout, 'isTTY', {
+        value: true,
+        configurable: true,
+      });
+      delete process.env.CI;
+      process.env.TERM = 'xterm-256color';
+
+      executeSpy.mockRejectedValue(new Error('Pipeline error'));
+
+      const controller = createCancellationController();
+      await expect(runReview(controller, [], {})).rejects.toThrow('Pipeline error');
+
+      expect(tuiStartSpy).toHaveBeenCalledTimes(1);
+      expect(tuiExitSpy).toHaveBeenCalledTimes(1);
     });
   });
 });
