@@ -30,6 +30,7 @@ describe('ReviewEngine', () => {
       model,
       config: {
         severity: 'medium',
+        failOnSeverity: 'critical',
         maxFindings: 50,
         minConfidence: 0.6,
       },

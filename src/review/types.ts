@@ -95,6 +95,20 @@ export interface ReviewResult {
 }
 
 /**
+ * Progress event emitted by the Review Engine across internal execution stages.
+ * Structurally decoupled from Layer 6 ReviewProgressEvent.
+ */
+export interface ReviewStageProgressEvent {
+  stage: string;
+  status: 'start' | 'progress' | 'complete' | 'error';
+  message: string;
+  step?: { current: number; total: number } | undefined;
+  payload?: Record<string, unknown> | undefined;
+}
+
+export type ReviewStageProgressCallback = (event: ReviewStageProgressEvent) => void;
+
+/**
  * Input arguments required to execute the Review Engine.
  */
 export interface ReviewEngineInput {
@@ -106,8 +120,9 @@ export interface ReviewEngineInput {
   symbolIndex: SymbolIndex;
   diagnostics: Diagnostic[];
   model: ReviewModel;
-  config?: ReviewConfig | undefined;
+  config?: (Partial<ReviewConfig> & Pick<ReviewConfig, 'severity' | 'maxFindings' | 'minConfidence'>) | undefined;
   signal?: AbortSignal | undefined;
+  onProgress?: ReviewStageProgressCallback | undefined;
   scopeMetadata?:
     | {
         scopeType: string;

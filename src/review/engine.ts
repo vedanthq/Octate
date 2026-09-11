@@ -97,6 +97,12 @@ export class ReviewEngine {
 
     // Stage 1: Review DAG (Structural baseline + conditional Semantic/Security)
     input.signal?.throwIfAborted();
+    input.onProgress?.({
+      stage: 'review:dag',
+      status: 'start',
+      message: 'Executing AI Reviewer DAG',
+      step: { current: 6, total: 8 },
+    });
     const dagResult = await executeReviewDAG({
       repoRoot: input.repoRoot,
       diff: input.diff,
@@ -106,6 +112,13 @@ export class ReviewEngine {
       diagnostics: input.diagnostics,
       model: input.model,
       signal: input.signal,
+    });
+    input.onProgress?.({
+      stage: 'review:dag',
+      status: 'complete',
+      message: `Reviewer DAG complete (${dagResult.findings.length} candidates)`,
+      step: { current: 6, total: 8 },
+      payload: { candidateCount: dagResult.findings.length },
     });
 
     log.info(
@@ -132,6 +145,12 @@ export class ReviewEngine {
 
     // Stage 3: Two-Stage Critic Quality Gate (Deterministic floor + critic.v1 model)
     input.signal?.throwIfAborted();
+    input.onProgress?.({
+      stage: 'review:critic',
+      status: 'start',
+      message: 'Filtering findings through Critic quality gate',
+      step: { current: 7, total: 8 },
+    });
     const criticResult = await executeCriticStage({
       findings: preCriticFindings,
       repoRoot: input.repoRoot,
@@ -141,6 +160,13 @@ export class ReviewEngine {
       model: input.model,
       minConfidence: input.config?.minConfidence ?? 0.6,
       signal: input.signal,
+    });
+    input.onProgress?.({
+      stage: 'review:critic',
+      status: 'complete',
+      message: `Critic gate evaluation complete (${criticResult.findings.length} findings)`,
+      step: { current: 7, total: 8 },
+      payload: { curatedCount: criticResult.findings.length },
     });
 
     log.info(
@@ -165,12 +191,25 @@ export class ReviewEngine {
 
     // Stage 5: Composite Ranking & Critical-Protected Truncation
     input.signal?.throwIfAborted();
+    input.onProgress?.({
+      stage: 'review:rank',
+      status: 'start',
+      message: 'Deduplicating, ranking, and assembling ReviewResult',
+      step: { current: 8, total: 8 },
+    });
     const rankedFindings = rankAndTruncateFindings({
       findings: postCriticFindings,
       referenceGraph: input.referenceGraph,
       symbolIndex: input.symbolIndex,
       minSeverity: input.config?.severity,
       maxFindings: input.config?.maxFindings ?? 50,
+    });
+    input.onProgress?.({
+      stage: 'review:rank',
+      status: 'complete',
+      message: `Review complete: ${rankedFindings.length} findings`,
+      step: { current: 8, total: 8 },
+      payload: { totalFindings: rankedFindings.length },
     });
 
     log.info(
