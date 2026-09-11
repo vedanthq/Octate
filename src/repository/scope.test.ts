@@ -96,6 +96,8 @@ describe('resolveScope', () => {
       expect(scope.base).toBe('HEAD');
       expect(scope.head).toBe('INDEX');
       expect(scope.diff).toContain('staged.ts');
+      expect(scope.files.length).toBeGreaterThan(0);
+      expect(scope.files[0].path).toBe('staged.ts');
     });
   });
 
@@ -113,6 +115,8 @@ describe('resolveScope', () => {
       expect(scope.base).toBe('INDEX');
       expect(scope.head).toBe('WORKDIR');
       expect(scope.diff).toContain('unstaged.ts');
+      expect(scope.files.length).toBeGreaterThan(0);
+      expect(scope.files[0].path).toBe('unstaged.ts');
     });
   });
 

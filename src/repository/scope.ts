@@ -3,10 +3,13 @@
  * Handles --staged, --working, --commit, --range flags.
  */
 
+import { promises as fs } from 'node:fs';
+import * as git from 'isomorphic-git';
 import { createGitError, createValidationError } from '../errors/index.js';
 import { createLogger } from '../logging/index.js';
 import type { FileChange, ReviewScope } from '../types/index.js';
 import {
+  findGitDir,
   getChangedFiles,
   getDiff,
   getParentCommit,
@@ -149,19 +152,77 @@ export async function resolveScope(options: ScopeOptions): Promise<ReviewScope> 
 /**
  * Gets staged files with their status.
  */
-async function getStagedFiles(_repoRoot: string): Promise<FileChange[]> {
-  // This is a simplified implementation
-  // In reality, we'd need to compare index vs HEAD
-  return [];
+async function getStagedFiles(repoRoot: string): Promise<FileChange[]> {
+  const gitDir = await findGitDir(repoRoot);
+  const matrix = await git.statusMatrix({ fs, dir: repoRoot, gitdir: gitDir });
+  const changes: FileChange[] = [];
+
+  for (const entry of matrix) {
+    const filepath = entry[0];
+    const head = entry[1];
+    const workdir = entry[2];
+    const stage = entry[3];
+
+    // Clean files where head === 1 && workdir === 1 && stage === 1 MUST NOT be classified as changed
+    if (head === 1 && workdir === 1 && stage === 1) {
+      continue;
+    }
+
+    if (stage !== head) {
+      let status: FileChange['status'] | undefined;
+      if (head === 0 && stage === 2) {
+        status = 'added';
+      } else if (head === 1 && (stage === 2 || stage === 3)) {
+        status = 'modified';
+      } else if (head === 1 && stage === 0) {
+        status = 'deleted';
+      }
+
+      if (status) {
+        changes.push({ path: filepath, status, staged: true });
+      }
+    }
+  }
+
+  return changes;
 }
 
 /**
  * Gets working tree files with their status.
  */
-async function getWorkingFiles(_repoRoot: string): Promise<FileChange[]> {
-  // This is a simplified implementation
-  // In reality, we'd need to compare working tree vs index
-  return [];
+async function getWorkingFiles(repoRoot: string): Promise<FileChange[]> {
+  const gitDir = await findGitDir(repoRoot);
+  const matrix = await git.statusMatrix({ fs, dir: repoRoot, gitdir: gitDir });
+  const changes: FileChange[] = [];
+
+  for (const entry of matrix) {
+    const filepath = entry[0];
+    const head = entry[1];
+    const workdir = entry[2];
+    const stage = entry[3];
+
+    // Clean files where head === 1 && workdir === 1 && stage === 1 MUST NOT be classified as changed
+    if (head === 1 && workdir === 1 && stage === 1) {
+      continue;
+    }
+
+    if (workdir !== stage) {
+      let status: FileChange['status'] | undefined;
+      if (stage === 0 && workdir === 2) {
+        status = 'added';
+      } else if ((workdir === 2 || workdir === 3) && stage !== 0) {
+        status = 'modified';
+      } else if (workdir === 0 && stage !== 0) {
+        status = 'deleted';
+      }
+
+      if (status) {
+        changes.push({ path: filepath, status, staged: false });
+      }
+    }
+  }
+
+  return changes;
 }
 
 /**

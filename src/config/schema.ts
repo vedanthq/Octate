@@ -7,6 +7,9 @@ import { z } from 'zod';
 
 export const ReviewConfigSchema = z.object({
   severity: z.enum(['critical', 'high', 'medium', 'low', 'info']).default('medium'),
+  failOnSeverity: z
+    .enum(['critical', 'high', 'medium', 'low', 'info', 'none', 'off'])
+    .default('critical'),
   maxFindings: z.number().int().positive().max(100).default(50),
   minConfidence: z.number().min(0).max(1).default(0.6),
 });
@@ -31,6 +34,7 @@ export const OctateConfigSchema = z
     project: ProjectConfigSchema,
     review: ReviewConfigSchema.default({
       severity: 'medium',
+      failOnSeverity: 'critical',
       maxFindings: 50,
       minConfidence: 0.6,
     }),
@@ -56,6 +60,7 @@ export const DefaultConfig: OctateConfig = {
   },
   review: {
     severity: 'medium',
+    failOnSeverity: 'critical',
     maxFindings: 50,
     minConfidence: 0.6,
   },
