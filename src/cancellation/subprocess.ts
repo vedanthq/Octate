@@ -110,15 +110,15 @@ export function spawnWithSignal(
       );
     });
 
-    child.on('close', (code: number | null, signal: string | null) => {
+    child.on('close', (code: number | null, closeSignal: string | null) => {
       cleanup();
 
-      if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+      if (closeSignal === 'SIGTERM' || closeSignal === 'SIGKILL') {
         // Check if this was due to our timeout
         if (timeout && timeoutHandle) {
           reject(
             new SubprocessError(`${command} timed out after ${timeout}ms`, {
-              signal,
+              signal: closeSignal,
               stdout,
               stderr,
             })
@@ -128,7 +128,7 @@ export function spawnWithSignal(
             stdout,
             stderr,
             exitCode: code,
-            signal,
+            signal: closeSignal,
           });
         }
         return;
@@ -138,7 +138,7 @@ export function spawnWithSignal(
         reject(
           new SubprocessError(`${command} exited with code ${code}`, {
             code: code?.toString() ?? '',
-            signal: signal ?? '',
+            signal: closeSignal ?? '',
             stdout,
             stderr,
           })
@@ -150,7 +150,7 @@ export function spawnWithSignal(
         stdout,
         stderr,
         exitCode: code,
-        signal,
+        signal: closeSignal,
       });
     });
 
@@ -189,9 +189,9 @@ export async function killProcessTree(pid: number, signal: string = 'SIGTERM'): 
     }
 
     // On Windows, use taskkill
-    const { spawn } = await import('node:child_process');
+    const childProcess = await import('node:child_process');
     return new Promise((resolve) => {
-      const kill = spawn('taskkill', ['/pid', pid.toString(), '/T', '/F']);
+      const kill = childProcess.spawn('taskkill', ['/pid', pid.toString(), '/T', '/F']);
       kill.on('close', (code) => {
         resolve(code === 0);
       });
@@ -221,10 +221,29 @@ export function spawnDetached(
  * Utility to run a command with timeout and optional cancellation.
  * Captures stdout and stderr by default.
  */
-export async function runCommand(
+export function runCommand(
   command: string,
   args: string[],
   options: SpawnWithSignalOptions = {}
 ): Promise<SpawnResult> {
   return spawnWithSignal(command, args, options);
+}
+
+/**
+ * Looks up the path of an executable on the system PATH using `which` (or `where` on Windows).
+ * Returns the resolved path or null if not found.
+ */
+export async function which(command: string): Promise<string | null> {
+  try {
+    const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+    const result = await spawnWithSignal(whichCmd, [command], { captureOutput: true });
+    if (result.exitCode === 0 && result.stdout.trim()) {
+      const lines = result.stdout.trim().split(/\r?\n/);
+      const firstLine = lines[0];
+      return firstLine ? firstLine.trim() : null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

@@ -11,8 +11,10 @@ export {
 
 export {
   killProcessTree,
+  runCommand,
+  type SpawnResult,
   type SpawnWithSignalOptions,
   SubprocessError,
-  type SpawnResult,
   spawnWithSignal,
+  which,
 } from './subprocess.js';

@@ -34,6 +34,7 @@ export function createProgram(): Command {
     .name('octate')
     .description('Terminal-native AI code review CLI')
     .version('0.1.0', '-v, --version', 'Display version number')
+    .exitOverride()
     .hook('preAction', (thisCommand, actionCommand) => {
       // Merge global options from parent commands
       const parentOpts = thisCommand.opts();
@@ -69,9 +70,30 @@ function _setupLogger(options: GlobalOptions): void {
 }
 
 /**
+ * Global exception and rejection traps to prevent unhandled crashes (D-10).
+ */
+export function setupProcessExceptionHandlers(): void {
+  process.on('uncaughtException', (error: Error) => {
+    logger.fatal({ error: error.message, stack: error.stack }, 'Uncaught exception');
+    process.stderr.write(`\nFatal Error: ${error.message}\n`);
+    process.exit(5);
+  });
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    logger.fatal({ reason }, 'Unhandled rejection');
+    process.stderr.write(`\nFatal Error: ${message}\n`);
+    process.exit(5);
+  });
+}
+
+// Install process exception traps on initialization
+setupProcessExceptionHandlers();
+
+/**
  * Handles errors and exits with appropriate code.
  */
-function handleError(error: unknown): never {
+export function handleError(error: unknown): never {
   // Handle cancellation (Ctrl+C / SIGINT)
   if (
     error instanceof Error &&
@@ -84,23 +106,30 @@ function handleError(error: unknown): never {
 
   if (isOctateError(error)) {
     logger.error({ error: error.message, context: error.context }, 'Command failed');
-    // biome-ignore lint/suspicious/noConsole: CLI user output
-    console.error(`Error: ${error.message}`);
+    process.stderr.write(`Error: ${error.message}\n`);
     process.exit(error.exitCode);
   }
 
-  // Handle validation errors from Commander.js
+  // Handle Commander errors (e.g. --help or invalid flags)
+  if (
+    error &&
+    typeof error === 'object' &&
+    'exitCode' in error &&
+    typeof (error as { exitCode: unknown }).exitCode === 'number'
+  ) {
+    process.exit((error as { exitCode: number }).exitCode);
+  }
+
+  // Handle validation errors or unexpected errors
   if (error instanceof Error) {
     logger.error({ error: error.message, stack: error.stack }, 'Unexpected error');
-    // biome-ignore lint/suspicious/noConsole: CLI user output
-    console.error(`Error: ${error.message}`);
+    process.stderr.write(`Error: ${error.message}\n`);
     process.exit(5); // Internal error
   }
 
   // Unknown error
   logger.error({ error: String(error) }, 'Unknown error');
-  // biome-ignore lint/suspicious/noConsole: CLI user output
-  console.error(`Error: ${String(error)}`);
+  process.stderr.write(`Error: ${String(error)}\n`);
   process.exit(5);
 }
 
@@ -111,14 +140,14 @@ export async function main(args: string[] = process.argv.slice(2)): Promise<numb
   const program = createProgram();
 
   try {
-    // Parse arguments
-    await program.parseAsync(args, { from: 'user' });
-
     // If no command was provided, show help
     if (!args.length) {
       program.outputHelp();
       return 0;
     }
+
+    // Parse arguments
+    await program.parseAsync(args, { from: 'user' });
 
     return typeof process.exitCode === 'number' ? process.exitCode : 0;
   } catch (error) {
