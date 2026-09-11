@@ -1,5 +1,6 @@
+import type { EventEmitter } from 'node:events';
 import { Box, useInput, useStdout } from 'ink';
-import { useReducer } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { copyToClipboard, formatPatchPreview } from './clipboard.js';
 import { CleanDashboard } from './components/CleanDashboard.js';
 import { DetailPane } from './components/DetailPane.js';
@@ -14,18 +15,56 @@ import {
   getActiveFinding,
   tuiStateReducer,
 } from './state.js';
-import type { TuiState } from './types.js';
+import type { TuiAction, TuiState } from './types.js';
 
 export interface AppProps {
   initialState: TuiState;
-  onQuit: () => void;
+  onQuit: (suppressedIds?: ReadonlySet<string> | undefined) => void;
   onReReview?: (() => Promise<void>) | undefined;
   fileContents?: Map<string, string> | undefined;
   diffText?: string | undefined;
+  actionEmitter?: EventEmitter | undefined;
 }
 
-export function App({ initialState, onQuit, onReReview, fileContents, diffText = '' }: AppProps) {
+export function App({
+  initialState,
+  onQuit,
+  onReReview,
+  fileContents: initialFileContents,
+  diffText: initialDiffText = '',
+  actionEmitter,
+}: AppProps) {
   const [state, dispatch] = useReducer(tuiStateReducer, initialState);
+  const [fileContents, setFileContents] = useState(initialFileContents);
+  const [diffText, setDiffText] = useState(initialDiffText);
+
+  useEffect(() => {
+    if (!actionEmitter) {
+      return;
+    }
+    const handleAction = (action: TuiAction) => {
+      dispatch(action);
+    };
+    const handleData = (data: {
+      fileContents?: Map<string, string> | undefined;
+      diffText?: string | undefined;
+    }) => {
+      if (data.fileContents) {
+        setFileContents(data.fileContents);
+      }
+      if (data.diffText !== undefined) {
+        setDiffText(data.diffText);
+      }
+    };
+
+    actionEmitter.on('action', handleAction);
+    actionEmitter.on('data', handleData);
+    return () => {
+      actionEmitter.off('action', handleAction);
+      actionEmitter.off('data', handleData);
+    };
+  }, [actionEmitter]);
+
   const { stdout } = useStdout();
   const columns = stdout?.columns ?? 80;
   const isWide = columns >= 100;
@@ -135,7 +174,7 @@ export function App({ initialState, onQuit, onReReview, fileContents, diffText =
     }
 
     if (input === 'q') {
-      onQuit();
+      onQuit(state.suppressedIds);
       return;
     }
   });
