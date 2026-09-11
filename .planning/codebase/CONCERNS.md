@@ -1,19 +1,19 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-09-10
+**Analysis Date:** 2026-09-11
 
 ## Tech Debt
 
-### [Review Command - Placeholder Execution]
-- **Issue:** `executeReview()` in `src/commands/review.ts:191-216` remains a placeholder that returns empty findings. The newly implemented Analysis Orchestrator (`src/analysis/orchestrator.ts`) is not yet connected to the CLI review pipeline.
+### [Phase 6 Application Layer & UseCase Orchestration Pending]
+- **Issue:** While `src/commands/review.ts` now wires `AnalysisOrchestrator`, `ContextEngine`, and `ReviewEngine`, the formal `ReviewUseCase` application orchestrator, progress event streaming (`review:progress`), live cancellation propagation, and renderer transformations (`HumanRenderer`, `JsonRenderer`, `SarifRenderer`) remain to be unified in Phase 6 and Phase 7.
 - **Files:** `src/commands/review.ts`
-- **Impact:** CLI executes without errors, but `octate review` produces no analysis findings until Phase 5 wires the analysis pipeline to AI reasoning.
-- **Fix approach:** In Phase 3-5, import `AnalysisOrchestrator` and run analysis on scoped files, feeding results to the Context Engine and Review Model.
+- **Impact:** CLI works in baseline mode but does not yet emit live progress stages or full CI/CD renderer formats.
+- **Fix approach:** Implement Phase 6 (Application Layer: `ReviewUseCase`, progress emitter, exit code mapper).
 
 ### [Scope Resolution - Empty Staged and Working File Lists]
-- **Issue:** `getStagedFiles()` and `getWorkingFiles()` in `src/repository/scope.ts:152-165` return empty arrays `return [];`.
+- **Issue:** `getStagedFiles()` and `getWorkingFiles()` in `src/repository/scope.ts:152-165` currently return empty arrays (`return [];`).
 - **Files:** `src/repository/scope.ts`
-- **Impact:** When a user runs `octate review --staged` or reviews the working tree, the resolved `ReviewScope` contains 0 files.
+- **Impact:** When a user runs `octate review --staged` or reviews the working tree, the resolved `ReviewScope.files` contains an empty list unless files are explicitly passed or derived from the diff.
 - **Fix approach:** Implement working and staged file listing using isomorphic-git's `statusMatrix` (matching the diff generation logic in `src/repository/git.ts:getStagedDiff()` and `getWorkingDiff()`).
 
 ### [Scope Resolution - Simplified Merge Base]
@@ -21,12 +21,6 @@
 - **Files:** `src/repository/scope.ts`
 - **Impact:** Three-dot range diffs (`--range base...head`) and branch comparisons (`--branch feature`) compute diffs against the branch ref rather than the merge-base fork point.
 - **Fix approach:** Implement common ancestor traversal or leverage isomorphic-git's merge-base utilities.
-
-### [Model Provider Factory - Not Implemented (Phase 4)]
-- **Issue:** `createModelProvider()` in `src/model/abstraction.ts:37-42` throws an error ("Provider not yet implemented (Phase 4)").
-- **Files:** `src/model/abstraction.ts`
-- **Impact:** AI reasoning layer cannot yet be instantiated.
-- **Fix approach:** Implement `LocalNvidiaProvider` in Phase 4 conforming to the `ReviewModel` interface.
 
 ### [Subprocess Tool Invocation via `npx`]
 - **Issue:** `src/analysis/diagnostics/tools.ts` invokes `tsc` and `biome` using `npx tsc` and `npx biome`.
@@ -42,10 +36,16 @@
 
 ## Known Bugs
 
+### [Jest Worker Teardown / Open Handles Warning]
+- **Issue:** When running the full test suite (`pnpm test`), Jest outputs: `A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown.`
+- **Files:** `jest.config.ts`, `src/cancellation/subprocess.ts`, `src/analysis/diagnostics/`
+- **Impact:** Tests pass 100% (54/54 suites), but worker force-exit warning adds log noise.
+- **Fix approach:** Identify unref'd timers or open subprocess streams and ensure explicit `.unref()` or teardown in `afterEach`/`afterAll`.
+
 ### [PromisePool.iterate() - Unstable Async Iteration]
 - **Issue:** The `iterate()` method in `src/cache/pool.ts:61-100` uses `Promise.race([p, Promise.resolve(null)])` which resolves to null immediately, failing to properly track task completion.
 - **Files:** `src/cache/pool.ts`
-- **Impact:** If `iterate()` is called, it yields invalid results. (Note: `run()`, `runAll()`, and `map()` are tested and working properly; `src/analysis/diagnostics/index.ts` uses `run()`, so it avoids this bug).
+- **Impact:** If `iterate()` is called, it yields invalid results. (Note: `run()`, `runAll()`, and `map()` are tested and working properly; review DAG and diagnostics use `run()`, so they avoid this bug).
 - **Fix approach:** Rewrite `iterate()` using an async generator queue or deprecate the unused method.
 
 ### [Subprocess Timeout Detection Flag]
@@ -66,11 +66,10 @@
 - **Issue:** `src/analysis/diagnostics/tools.ts` executes static analysis tools (`tsc`, `biome`, `ruff`, etc.) with arguments passed to child processes.
 - **Files:** `src/analysis/diagnostics/tools.ts`, `src/cancellation/subprocess.ts`
 - **Current mitigation:** `spawnWithSignal` uses `child_process.spawn` with argument arrays (not `child_process.exec` with shell interpolation). Repository-defined configurations (`tsconfig.json`, `biome.json`) control tool behavior.
-- **Recommendations:** Continue avoiding `shell: true` in `spawn` calls to prevent command injection.
 
 ## Performance & Scalability
 
-### [Tree-sitter WASM Binary Resolution]
+### [Tree-sitter WASM Binary Resolution in Distributed Package]
 - **Issue:** Tree-sitter WebAssembly grammars are currently stored in `test-wasm/` in the project root. `src/analysis/parser/languages.ts` resolves grammars relative to the working directory or expected test paths.
 - **Files:** `src/analysis/parser/languages.ts`, `test-wasm/`
 - **Impact:** When compiled to `dist/` and run as a globally installed CLI binary (`npm i -g octate`), the relative path `test-wasm/` may not exist in the user's execution directory.
@@ -81,14 +80,7 @@
 - **Current mitigation:** Concurrency is bounded to 3 parallel jobs via `PromisePool` in `src/analysis/diagnostics/index.ts`.
 - **Improvement path:** Adjust concurrency dynamically based on available hardware cores (`os.availableParallelism?.() ?? 4`).
 
-## Test Coverage Gaps
-
-### [Tree-sitter TSX and JavaScript Specific AST Queries]
-- **Status:** TypeScript (`.ts`) and Python (`.py`) AST parsing and symbol extraction are covered with unit tests.
-- **Gap:** TSX (`.tsx`) JSX syntax nodes and pure JavaScript CommonJS modules have basic coverage through TypeScript parser, but specialized JSX/React symbol patterns are not yet comprehensively tested.
-- **Priority:** Medium.
-
 ---
 
-*Concerns audit: 2026-09-10*
+*Concerns audit: 2026-09-11*
 *Update as issues are resolved or new technical debt is introduced*

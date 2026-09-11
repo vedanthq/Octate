@@ -1,6 +1,6 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-09-10
+**Analysis Date:** 2026-09-11
 
 ## Directory Layout
 
@@ -8,13 +8,30 @@
 Octate/
 ├── src/                          # Source code (TypeScript)
 │   ├── cli.ts                    # CLI entry point (Commander setup & global error handling)
-│   ├── analysis/                 # Deterministic analysis layer (Phase 2)
+│   ├── commands/                 # CLI subcommand handlers
+│   │   ├── index.ts              # Command registration barrel
+│   │   ├── review.ts             # Review subcommand (analysis → context → review engine)
+│   │   ├── review.test.ts        # Review command integration tests
+│   │   ├── doctor.ts             # Doctor environment diagnostics (node, git, tools, nvidia)
+│   │   ├── doctor.test.ts        # Doctor command tests
+│   │   ├── init.ts               # Init configuration scaffolding
+│   │   └── init.test.ts          # Init command tests
+│   ├── repository/               # Layer 1: Git/repository operations
+│   │   ├── index.ts              # Public API barrel
+│   │   ├── discovery.ts          # Git root + workspace detection
+│   │   ├── git.ts                # isomorphic-git wrapper (diff, log, status, refs)
+│   │   ├── scope.ts              # Scope resolution (--staged, --commit, --range, --branch)
+│   │   ├── filter.ts             # File filtering (binary, generated, symlinks, size)
+│   │   ├── ignore.ts             # .gitignore & .octateignore parsing
+│   │   ├── monorepo.ts           # Monorepo workspace detection (pnpm, npm, yarn, cargo)
+│   │   └── *.test.ts             # Unit tests for repository modules
+│   ├── analysis/                 # Layer 2: Deterministic analysis layer
 │   │   ├── index.ts              # Analysis public API barrel
-│   │   ├── types.ts              # Analysis domain types (ParsedFile, Symbol, AnalysisResult)
-│   │   ├── orchestrator.ts       # Analysis orchestrator (pipeline: parse → symbols → diagnostics)
+│   │   ├── types.ts              # Domain types (ParsedFile, Symbol, AnalysisResult)
+│   │   ├── orchestrator.ts       # Analysis pipeline (parse → symbols → diagnostics)
 │   │   ├── orchestrator.test.ts  # Orchestrator pipeline integration tests
 │   │   ├── parser/               # WebAssembly Tree-sitter parsing
-│   │   │   ├── index.ts          # Tree-sitter parser initialization & AST generation
+│   │   │   ├── index.ts          # Parser initialization & AST generation
 │   │   │   ├── index.test.ts     # Parser tests (TS/JS/Python)
 │   │   │   ├── languages.ts      # Language detection & grammar loading
 │   │   │   └── languages.test.ts # Language detection tests
@@ -29,251 +46,209 @@ Octate/
 │   │       ├── severity.test.ts  # Severity mapping tests
 │   │       ├── tools.ts          # Subprocess tool execution (tsc, biome, ruff, mypy, pyright, bandit, pytest)
 │   │       └── tools.test.ts     # Tool runner tests
-│   ├── repository/               # Git/repository operations
-│   │   ├── index.ts              # Public API barrel
-│   │   ├── discovery.ts          # Git root + workspace detection
-│   │   ├── git.ts                # isomorphic-git wrapper (diff, log, status, refs)
-│   │   ├── scope.ts              # Scope resolution (--staged, --commit, --range, --branch)
-│   │   ├── filter.ts             # File filtering (binary, generated, symlinks, size)
-│   │   ├── ignore.ts             # .gitignore & .octateignore parsing
-│   │   ├── monorepo.ts           # Monorepo workspace detection (pnpm, npm, yarn, cargo)
-│   │   └── *.test.ts             # Tests for each repository module
-│   ├── model/                    # AI model abstraction layer
-│   │   ├── index.ts              # Public API barrel
+│   ├── intelligence/             # Layer 3: Intelligence & Context Engine
+│   │   ├── index.ts              # Intelligence public API barrel
+│   │   ├── types.ts              # Domain types (ReferenceGraph, DependencyGraph, ReviewContext)
+│   │   ├── index/                # Multi-file symbol indexing & resolution
+│   │   │   ├── symbol-index.ts   # In-memory symbol index with range & fuzzy lookup
+│   │   │   ├── symbol-index.test.ts
+│   │   │   ├── path-resolver.ts  # Cross-file import path resolution
+│   │   │   └── path-resolver.test.ts
+│   │   ├── graph/                # Dependency & reference relationship graphs
+│   │   │   ├── reference.ts      # Reference graph (callers/callees, callers reverse lookup)
+│   │   │   ├── reference.test.ts
+│   │   │   ├── dependency.ts     # Package & internal module dependency graph
+│   │   │   └── dependency.test.ts
+│   │   └── context/              # Context Engine & prompt context serialization
+│   │       ├── engine.ts         # Candidate ranking & ReviewContext assembly
+│   │       ├── engine.test.ts
+│   │       ├── budget.ts         # Token budgeting and estimation
+│   │       ├── budget.test.ts
+│   │       ├── windowing.ts      # Context snippet extraction and windowing
+│   │       ├── windowing.test.ts
+│   │       ├── serializer.ts     # Sandwich prompt framing & trust demarcation
+│   │       └── serializer.test.ts
+│   ├── model/                    # Layer 4: AI Model Provider & Structured Outputs
+│   │   ├── index.ts              # Model public API barrel
 │   │   ├── types.ts              # Request/response types, Finding, Diagnostic contracts
-│   │   ├── abstraction.ts        # ReviewModel interface + provider factory
-│   │   └── abstraction.test.ts   # Model abstraction tests
-│   ├── cache/                    # File-based caching with LRU eviction
+│   │   ├── abstraction.ts        # ReviewModel interface + createModelProvider factory
+│   │   ├── abstraction.test.ts
+│   │   ├── prompts/              # Versioned markdown prompts & template rendering
+│   │   │   ├── template.ts       # Regex template engine for variables & blocks
+│   │   │   ├── template.test.ts
+│   │   │   ├── fallbacks.ts      # In-memory prompt fallbacks
+│   │   │   ├── fallbacks.test.ts
+│   │   │   ├── reviewer.structural.v1.md
+│   │   │   ├── reviewer.semantic.v1.md
+│   │   │   ├── reviewer.security.v1.md
+│   │   │   └── critic.v1.md
+│   │   ├── schema/               # Zod schemas, JSON extraction, grounding & repair
+│   │   │   ├── finding.ts        # FindingsPayloadSchema with Zod AOT compilation
+│   │   │   ├── finding.test.ts
+│   │   │   ├── extractor.ts      # Markdown code fence & trailing comma stripping
+│   │   │   ├── extractor.test.ts
+│   │   │   ├── grounding.ts      # File existence & line bounds clamping
+│   │   │   ├── grounding.test.ts
+│   │   │   ├── repair.ts         # Actionable error formatting for 2-turn repair loop
+│   │   │   └── repair.test.ts
+│   │   └── providers/            # Provider implementations & resilience
+│   │       ├── nvidia.ts         # LocalNvidiaProvider using native fetch
+│   │       ├── nvidia.test.ts
+│   │       ├── resilience.ts     # 60s timeout, exponential backoff, retry, pool(2)
+│   │       └── resilience.test.ts
+│   ├── review/                   # Layer 5: Review Engine
+│   │   ├── index.ts              # Authoritative public API barrel
+│   │   ├── types.ts              # ReviewEngine domain models (ReviewResult, RankedFinding, etc.)
+│   │   ├── heuristics.ts         # AST executable logic & security pattern triggers
+│   │   ├── heuristics.test.ts
+│   │   ├── dag.ts                # Staged DAG concurrency runner with graceful degradation
+│   │   ├── dag.test.ts
+│   │   ├── critic.ts             # Two-stage Critic quality gate (hard floor + critic.v1)
+│   │   ├── critic.test.ts
+│   │   ├── dedup.ts              # Multi-factor duplicate clustering & evidence merging
+│   │   ├── dedup.test.ts
+│   │   ├── ranking.ts            # 6-factor composite scoring & Critical-protection truncation
+│   │   ├── ranking.test.ts
+│   │   ├── engine.ts             # End-to-end ReviewEngine orchestrator (Stages 1–5)
+│   │   ├── engine.test.ts
+│   │   └── __tests__/
+│   │       └── mocks.ts          # Test fixtures and MockReviewModel
+│   ├── cache/                    # Infrastructure: File-based caching with LRU eviction
 │   │   ├── index.ts              # Public API barrel
 │   │   ├── store.ts              # CacheStore class (atomic writes, size tracking)
 │   │   ├── keys.ts               # Cache key generation (AST, index, tool result, config hash)
 │   │   ├── lru.ts                # In-memory LRU cache
 │   │   ├── pool.ts               # PromisePool for concurrency control (p-limit wrapper)
 │   │   ├── identity.ts           # Cache directory + project identity hashing
-│   │   └── *.test.ts             # Tests for each cache module
-│   ├── config/                   # Configuration system
+│   │   └── *.test.ts
+│   ├── config/                   # Infrastructure: Configuration system
 │   │   ├── index.ts              # Public API barrel
 │   │   ├── schema.ts             # Zod schemas + DefaultConfig
 │   │   ├── loader.ts             # Config file discovery (cosmiconfig + YAML)
 │   │   ├── merger.ts             # Precedence merging (defaults < global < project < env < CLI)
-│   │   └── *.test.ts             # Tests for config modules
-│   ├── logging/                  # Structured logging
+│   │   └── *.test.ts
+│   ├── logging/                  # Infrastructure: Structured logging
 │   │   ├── index.ts              # Pino root logger + createLogger child factory + redaction
-│   │   └── index.test.ts         # Logging tests
-│   ├── errors/                   # Typed error hierarchy
+│   │   └── index.test.ts
+│   ├── errors/                   # Infrastructure: Typed error hierarchy
 │   │   ├── index.ts              # Base OctateError + 13 specialized error classes + guards
-│   │   └── index.test.ts         # Error hierarchy tests
-│   ├── cancellation/             # Cancellation & subprocess management
+│   │   └── index.test.ts
+│   ├── cancellation/             # Infrastructure: Cancellation & subprocess management
 │   │   ├── index.ts              # Public API barrel
 │   │   ├── controller.ts         # CancellationController (AbortController wrapper)
 │   │   ├── subprocess.ts         # spawnWithSignal + process tree termination
-│   │   └── *.test.ts             # Cancellation tests
-│   └── types/                    # Core cross-cutting domain types
+│   │   └── *.test.ts
+│   └── types/                    # Cross-cutting domain types
 │       ├── index.ts              # Repository, Workspace, FileChange, ReviewScope types & guards
-│       └── index.test.ts         # Type guard tests
-├── test-wasm/                    # WebAssembly grammars for Tree-sitter testing
+│       └── index.test.ts
+├── test-wasm/                    # WebAssembly grammars for Tree-sitter
 │   ├── tree-sitter-typescript.wasm
 │   └── tree-sitter-python.wasm
 ├── dist/                         # Compiled JavaScript output (generated by tsc)
 │   ├── cli.js                    # Compiled CLI binary entry
-│   └── ...                       # Compiled modules mirroring src/
+│   └── ...
 ├── .planning/                    # GSD planning artifacts
 │   ├── codebase/                 # Codebase maps (STACK, ARCHITECTURE, STRUCTURE, etc.)
-│   ├── phases/                   # Phase plans, execution summaries, and manifests
+│   ├── phases/                   # Phase plans, execution summaries, and verification reports
 │   ├── research/                 # Architectural and stack research
 │   ├── STATE.md                  # Current project state
 │   ├── ROADMAP.md                # Milestone and phase roadmap
 │   ├── REQUIREMENTS.md           # Requirement specifications
 │   └── PROJECT.md                # Project core value and constraints
-├── .opencode/                    # OpenCode configuration
-│   ├── skills/                   # Project skills
-│   └── rules/                    # Project rules
-├── node_modules/                 # Node.js dependencies (ignored)
-├── coverage/                     # Jest coverage reports (ignored)
 ├── package.json                  # Project manifest, dependencies, and bin entry
 ├── pnpm-lock.yaml                # Lockfile
-├── pnpm-workspace.yaml           # pnpm workspace configuration
 ├── tsconfig.json                 # TypeScript compiler options
 ├── biome.json                    # Biome linting and formatting rules
 ├── jest.config.ts                # Jest configuration with ts-jest ESM support
-├── octate.yaml                   # Example / default project configuration
 └── AGENTS.md                     # Agent conventions and execution rules
 ```
 
 ## Directory Purposes
 
-**src/**: Main source code root
-- **Purpose**: All TypeScript implementation files
-- **Contains**: Layered architecture modules (CLI, commands, analysis, repository, model, cache, config, logging, errors, cancellation, types)
-- **Key files**: `src/cli.ts` (entry), `src/commands/review.ts` (orchestration)
+**src/repository/**: Layer 1 — Git and Filesystem Operations
+- **Purpose**: Repository discovery, Git history, scope resolution, file filtering, and ignore rules.
+- **Key files**: `git.ts` (isomorphic-git wrapper), `scope.ts` (scope resolution), `filter.ts` (binary/generated filter), `monorepo.ts` (workspace detection).
 
-**src/analysis/**: Deterministic Analysis Layer (Phase 2)
-- **Purpose**: Fast AST parsing, symbol extraction, and static analysis diagnostic collection
-- **Contains**: `orchestrator.ts`, `types.ts`, `parser/`, `symbols/`, `diagnostics/`
-- **Key files**: `src/analysis/orchestrator.ts` (unified pipeline), `src/analysis/parser/index.ts` (Tree-sitter WASM parser), `src/analysis/symbols/index.ts` (symbol extraction), `src/analysis/diagnostics/index.ts` (parallel tool execution)
+**src/analysis/**: Layer 2 — Deterministic Analysis Layer
+- **Purpose**: Fast AST parsing, symbol extraction, and static analysis diagnostic collection.
+- **Key files**: `orchestrator.ts` (unified pipeline), `parser/index.ts` (Tree-sitter WASM parser), `symbols/index.ts` (symbol extraction), `diagnostics/index.ts` (parallel tool execution).
 
-**src/analysis/parser/**: WebAssembly Tree-sitter AST Parser
-- **Purpose**: Language-aware concrete syntax tree parsing without native compilation dependencies
-- **Contains**: Parser lifecycle management, WASM binary loading, language detection
-- **Key files**: `index.ts` (Parser initialization and file parsing), `languages.ts` (Language resolution for TS/JS and Python)
+**src/intelligence/**: Layer 3 — Repository Intelligence & Context Engine
+- **Purpose**: Cross-file reference tracking, dependency graphs, token-budgeted snippet windowing, and prompt context serialization.
+- **Key files**: `index/symbol-index.ts` (multi-file symbol search), `graph/reference.ts` (directed reference graph with `getIncoming`), `context/engine.ts` (candidate ranking & budget allocation), `context/serializer.ts` (sandwich prompt serialization).
 
-**src/analysis/symbols/**: AST Symbol Extraction
-- **Purpose**: Extract high-level declarations (classes, functions, methods, interfaces, variables) with line numbers and signatures
-- **Contains**: S-expression query definitions and AST symbol extraction logic
-- **Key files**: `index.ts` (extractSymbols), `queries.ts` (TS and Python tree-sitter queries)
+**src/model/**: Layer 4 — AI Model Provider & Structured Outputs
+- **Purpose**: NVIDIA Nemotron API integration, versioned prompt definitions, Zod schema validation, grounding, and 2-turn error repair.
+- **Key files**: `providers/nvidia.ts` (LocalNvidiaProvider), `providers/resilience.ts` (retry, backoff, timeout, concurrency pool of 2), `schema/finding.ts` (compiled findings schema), `schema/grounding.ts` (line clamps & path verification), `schema/repair.ts` (repair prompt generator).
 
-**src/analysis/diagnostics/**: External Static Analysis & Linting Diagnostics
-- **Purpose**: Detect and run available linters, typecheckers, and security tools; normalize output into unified `Diagnostic[]`
-- **Contains**: Tool detection, execution via `spawnWithSignal`, severity normalization
-- **Key files**: `tools.ts` (tool configs and detection), `severity.ts` (severity mapping), `index.ts` (parallel execution pool)
+**src/review/**: Layer 5 — Review Engine
+- **Purpose**: Review DAG scheduling, two-stage Critic filtering, multi-factor finding deduplication, confidence-weighted composite ranking, and authoritative ReviewResult creation.
+- **Key files**: `heuristics.ts` (AST logic & security pattern triggers), `dag.ts` (staged Review DAG runner), `critic.ts` (deterministic hard floor + LLM Critic), `dedup.ts` (clustering & evidence merging), `ranking.ts` (0-100 composite ranking), `engine.ts` (end-to-end review engine).
 
 **src/commands/**: CLI Subcommand Implementations
-- **Purpose**: Business logic and command handlers for `octate` subcommands
-- **Contains**: `review.ts`, `init.ts`, `doctor.ts`, command registry, and tests
-- **Key files**: `src/commands/review.ts` (main review command), `src/commands/doctor.ts` (system and tool diagnostics), `src/commands/init.ts` (config scaffolding)
-
-**src/repository/**: Git and Filesystem Operations
-- **Purpose**: Repository discovery, Git history, scope resolution, file filtering, and ignore rules
-- **Contains**: `git.ts`, `scope.ts`, `discovery.ts`, `filter.ts`, `ignore.ts`, `monorepo.ts`, and tests
-- **Key files**: `git.ts` (isomorphic-git wrapper), `scope.ts` (scope resolution), `filter.ts` (binary/generated filter), `monorepo.ts` (workspace detection)
-
-**src/model/**: AI Model Abstraction Layer
-- **Purpose**: Provider-agnostic interfaces and data contracts for code review reasoning
-- **Contains**: `types.ts`, `abstraction.ts`, and tests
-- **Key files**: `types.ts` (ModelRequest, ModelResponse, Finding, Diagnostic interfaces), `abstraction.ts` (ReviewModel interface)
+- **Purpose**: User-facing command routing and CLI pipeline integration.
+- **Key files**: `src/commands/review.ts` (main review command), `src/commands/doctor.ts` (system/model diagnostics), `src/commands/init.ts` (config scaffolding).
 
 **src/cache/**: Local Caching & Concurrency
-- **Purpose**: Content-addressable cache store with LRU eviction and concurrency control
-- **Contains**: `store.ts`, `keys.ts`, `lru.ts`, `pool.ts`, `identity.ts`, and tests
-- **Key files**: `store.ts` (CacheStore implementation), `keys.ts` (Cache key generators for files, indices, and tool runs), `pool.ts` (PromisePool)
+- **Purpose**: Content-addressable cache store with LRU eviction and concurrency control (`PromisePool`).
 
 **src/config/**: Configuration System
-- **Purpose**: Configuration loading, schema validation, and hierarchical merging
-- **Contains**: `schema.ts`, `loader.ts`, `merger.ts`, and tests
-- **Key files**: `schema.ts` (Zod schemas and defaults), `loader.ts` (cosmiconfig and YAML parsing), `merger.ts` (precedence resolution)
+- **Purpose**: Hierarchical configuration loading, schema validation with Zod, and precedence merging.
 
 **src/logging/**: Structured Logging
-- **Purpose**: Fast structured JSON logging with automatic secret redaction
-- **Contains**: Pino instance configuration and child logger factory
-- **Key files**: `index.ts` (root logger, `createLogger`, redaction paths)
+- **Purpose**: Fast Pino JSON logger with child context loggers and automated credential redaction.
 
 **src/errors/**: Typed Error Hierarchy
-- **Purpose**: Domain-specific error classes with deterministic exit codes and structured context
-- **Contains**: `OctateError`, `ConfigurationError`, `GitError`, `AnalysisError`, `ModelError`, etc.
-- **Key files**: `index.ts` (Error classes, factory helpers, type guards)
+- **Purpose**: Domain-specific error classes with deterministic exit codes (0=success, 2=config, 3=repo/analysis/context, 4=model/provider, 5=validation/internal).
 
-**src/cancellation/**: Process Cancellation & Subprocess Control
-- **Purpose**: Graceful task cancellation, signal propagation, and subprocess process-tree termination
-- **Contains**: `controller.ts`, `subprocess.ts`, and tests
-- **Key files**: `controller.ts` (CancellationController), `subprocess.ts` (spawnWithSignal and killProcessTree)
-
-**src/types/**: Core Domain Types
-- **Purpose**: Cross-cutting types shared across layers (Repository, Workspace, FileChange, ReviewScope)
-- **Contains**: Core TypeScript interfaces and type guards
-- **Key files**: `index.ts`
-
-**test-wasm/**: Tree-sitter WebAssembly Binaries
-- **Purpose**: Precompiled WASM grammars for TypeScript and Python AST parsing in tests and analysis
-- **Contains**: `tree-sitter-typescript.wasm`, `tree-sitter-python.wasm`
+**src/cancellation/**: Process Cancellation
+- **Purpose**: Graceful task cancellation, signal propagation, and subprocess process-tree cleanup.
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/cli.ts` — Main CLI entry point, Commander initialization, global exception handling
-- `package.json:bin.octate` → `./dist/cli.js` — Executable binary target
+- `src/cli.ts` — Main CLI entry point, Commander initialization, global exception handling.
+- `package.json:bin.octate` → `./dist/cli.js` — Executable binary target.
 
 **Configuration:**
-- `src/config/schema.ts` — Zod schemas (`OctateConfigSchema`, `ReviewConfigSchema`, etc.)
-- `src/config/merger.ts` — Config merging logic with strict precedence
-- `src/config/loader.ts` — File search via cosmiconfig and YAML parsing
-- `biome.json` — Linting and code formatting configuration
-- `tsconfig.json` — TypeScript compiler configuration
-- `jest.config.ts` — Jest test runner configuration
+- `src/config/schema.ts` — Zod schemas (`OctateConfigSchema`, `ReviewConfigSchema`, etc.).
+- `src/config/merger.ts` — Config merging logic with strict precedence.
+- `src/config/loader.ts` — File search via cosmiconfig and YAML parsing.
+- `biome.json` — Linting and code formatting configuration.
+- `tsconfig.json` — TypeScript compiler configuration.
+- `jest.config.ts` — Jest test runner configuration.
 
-**Core Analysis & Review Logic:**
-- `src/analysis/orchestrator.ts` — Orchestrates parse → symbols → diagnostics pipeline
-- `src/analysis/parser/index.ts` — WebAssembly Tree-sitter parsing engine
-- `src/analysis/symbols/index.ts` — AST symbol extraction
-- `src/analysis/diagnostics/index.ts` — Parallel diagnostics collection with bounded concurrency
-- `src/analysis/diagnostics/tools.ts` — Tool detection and subprocess execution
-- `src/commands/review.ts` — Review subcommand execution flow
-- `src/repository/git.ts` — Git operations via isomorphic-git
-- `src/repository/scope.ts` — Scope flag parsing and diff resolution
-- `src/cache/store.ts` — Cache store with atomic write guarantees
-- `src/cache/keys.ts` — Cache key generation for ASTs and tool diagnostics
+**Review Engine Pipeline:**
+- `src/commands/review.ts` — Connects repository discovery, analysis orchestrator, context engine, and review engine.
+- `src/review/engine.ts` — Review engine orchestrator executing Stages 1–5.
+- `src/review/dag.ts` — Runs Structural reviewer unconditionally, Semantic & Security conditionally.
+- `src/review/critic.ts` — Hard floor pre-filter + LLM Critic verification.
+- `src/review/dedup.ts` — Multi-factor duplicate clustering and evidence merging.
+- `src/review/ranking.ts` — 6-factor composite scoring and Critical-protected truncation.
 
 **Testing:**
-- `src/**/*.test.ts` — Co-located unit and integration tests (30 suites, 439 tests)
-- `jest.config.ts` — Jest configuration with ts-jest ESM preset
+- `src/**/*.test.ts` — Co-located unit and integration tests (54 suites, 631 tests).
+- `jest.config.ts` — Jest configuration with ts-jest ESM preset.
 
 ## Naming Conventions
 
 **Files:**
-- **Modules**: kebab-case (`git.ts`, `scope.ts`, `orchestrator.ts`, `severity.ts`)
-- **Tests**: `*.test.ts` suffix co-located next to the module being tested
-- **Barrel exports**: `index.ts` in each feature directory
-- **Types**: `types.ts` for domain models, `schema.ts` for Zod schemas
+- **Modules**: kebab-case (`git.ts`, `scope.ts`, `orchestrator.ts`, `symbol-index.ts`, `ranking.ts`).
+- **Tests**: `*.test.ts` suffix co-located next to the module being tested.
+- **Barrel exports**: `index.ts` in each feature directory.
+- **Types**: `types.ts` for domain models, `schema.ts` for Zod schemas.
 
 **Directories:**
-- **Feature-based**: Grouped by domain (`analysis/`, `repository/`, `cache/`, `model/`, `commands/`)
-- **Sub-features**: Grouped logically within domains (`analysis/parser/`, `analysis/symbols/`, `analysis/diagnostics/`)
+- **Feature-based**: Grouped by domain (`repository/`, `analysis/`, `intelligence/`, `model/`, `review/`, `commands/`).
+- **Sub-features**: Grouped logically within domains (`intelligence/graph/`, `model/prompts/`, `review/__tests__/`).
 
 **Code:**
-- **Functions**: camelCase (`analyzeCodebase`, `extractSymbols`, `runDiagnostics`, `resolveScope`)
-- **Classes**: PascalCase (`AnalysisOrchestrator`, `TreeSitterParser`, `CacheStore`, `CancellationController`)
-- **Interfaces / Types**: PascalCase (`AnalysisResult`, `ParsedFile`, `Symbol`, `Diagnostic`, `ReviewScope`)
-- **Constants**: UPPER_SNAKE_CASE (`TOOL_DEFINITIONS`, `SEVERITY_LEVELS`, `DefaultConfig`)
-
-## Where to Add New Code
-
-**New Static Analysis Tool:**
-- Configuration: Add entry to `TOOL_DEFINITIONS` in `src/analysis/diagnostics/tools.ts`
-- Severity mapping: Add tool parser/mapping to `src/analysis/diagnostics/severity.ts`
-- Tests: Add tool detection/normalization cases in `src/analysis/diagnostics/tools.test.ts` and `severity.test.ts`
-
-**New Language Grammar / Parser:**
-- WASM binary: Place `.wasm` grammar file into WASM path (e.g., `test-wasm/` or configured WASM directory)
-- Grammar loading: Update language loader in `src/analysis/parser/languages.ts`
-- Queries: Define symbol queries in `src/analysis/symbols/queries.ts`
-- Tests: Add parser test in `src/analysis/parser/languages.test.ts`
-
-**New Command:**
-- Implementation: `src/commands/<name>.ts`
-- Registration: Register in `src/commands/index.ts`
-- Tests: `src/commands/<name>.test.ts`
-
-**New Cache Key / Strategy:**
-- Implementation: Add key generation helper in `src/cache/keys.ts`
-- Tests: `src/cache/keys.test.ts`
-
-**New Config Option:**
-- Schema: Add field to `src/config/schema.ts`
-- Defaults: Update `DefaultConfig` in `src/config/schema.ts`
-- Merger: Update `src/config/merger.ts` if custom merging required
-
-## Special Directories
-
-**test-wasm/**
-- **Purpose**: Precompiled Tree-sitter WebAssembly grammars (`tree-sitter-typescript.wasm`, `tree-sitter-python.wasm`)
-- **Generated**: Built via Tree-sitter CLI / grammar packages
-- **Committed**: Yes (required for testing and parsing runtime)
-
-**dist/**
-- **Purpose**: Compiled JavaScript artifacts for CLI execution
-- **Generated**: Yes (`pnpm run build` → `tsc`)
-- **Committed**: Yes (distributed with the package)
-
-**coverage/**
-- **Purpose**: Test coverage output
-- **Generated**: Yes (`pnpm test`)
-- **Committed**: No (in `.gitignore`)
-
-**.planning/**
-- **Purpose**: GSD planning, architecture documents, phase trackers, codebase maps
-- **Generated**: Partially (via GSD workflows)
-- **Committed**: Yes
+- **Functions**: camelCase (`analyzeCodebase`, `extractSymbols`, `createReviewEngine`, `filterDeterministicHardFloor`).
+- **Classes**: PascalCase (`AnalysisOrchestrator`, `SymbolIndex`, `ReferenceGraph`, `LocalNvidiaProvider`, `ReviewEngine`).
+- **Interfaces / Types**: PascalCase (`ReviewResult`, `RankedFinding`, `ModelRequest`, `ModelFinding`, `ReviewScope`).
+- **Constants**: UPPER_SNAKE_CASE (`DEFAULT_CONFIG`, `SEVERITY_WEIGHTS`, `RANKING_WEIGHTS`).
 
 ---
 
-*Structure analysis: 2026-09-10*
+*Structure analysis: 2026-09-11*
 *Update when directory structure or architecture changes*

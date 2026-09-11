@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Analysis Date:** 2026-09-10
+**Analysis Date:** 2026-09-11
 
 ## Languages
 
@@ -20,7 +20,7 @@
 - pnpm 12.3.4 - Fast, disk-efficient, workspace support (`pnpm-workspace.yaml`), strict dependency isolation.
 - Lockfile: `pnpm-lock.yaml` present.
 
-## Frameworks
+## Frameworks & Tooling
 
 **Core CLI:**
 - Commander.js 15.0.0 - Command line routing, subcommand dispatch (`review`, `doctor`, `init`), options and flag parsing. Entry point: `src/cli.ts`.
@@ -29,6 +29,7 @@
 - Jest 30.5.1 - Test runner, parallel execution, snapshot testing, mocking.
 - ts-jest 29.4.12 - TypeScript transformer with ESM support (`jest.config.ts`).
 - @jest/globals 30.5.1 - Explicit type-safe Jest globals.
+- Test Suite: 54 test suites, 631 tests passing.
 
 **Build & Developer Tooling:**
 - TypeScript 5.9.3 (`tsc`) - Compiler (`tsconfig.json`), declaration emitter.
@@ -36,31 +37,50 @@
 - @biomejs/biome 2.5.12 - Unified fast Rust-based linter and formatter (`biome.json`).
 - husky latest - Git commit hooks management.
 
-## Key Dependencies
+## Key Dependencies by Layer
 
-**Parsing & Syntax Trees (Analysis Layer):**
+**1. Repository & Infrastructure Layer:**
+| Package | Version | Purpose | Usage Location |
+|---|---|---|---|
+| `commander` | 15.0.0 | CLI routing, argument & flag parsing | `src/cli.ts`, `src/commands/*.ts` |
+| `isomorphic-git` | 1.41.9 | Pure JS Git operations (diff, statusMatrix, log, refs) | `src/repository/git.ts`, `src/repository/scope.ts` |
+| `fast-glob` | 3.3.3 | Workspace package discovery across glob patterns | `src/repository/monorepo.ts` |
+| `ignore` | 7.0.8 | `.gitignore` and `.octateignore` parsing and path matching | `src/repository/ignore.ts`, `src/repository/filter.ts` |
+| `yaml` | 2.9.0 | YAML 1.2 parsing for `octate.yaml` configuration | `src/config/loader.ts` |
+| `pino` | 10.3.1 | High-throughput structured JSON logging with redaction | `src/logging/index.ts` |
+| `pino-pretty` | ^13.1.3 | Colorized human-readable logs for development mode | `src/logging/index.ts` |
+| `p-limit` | 7.3.2 | Promise concurrency limiting and pool control | `src/cache/pool.ts` |
+| `picocolors` | 1.1.1 | Zero-dependency terminal ANSI colors | `src/commands/review.ts` |
+| `@microsoft/sarif` | latest | SARIF v2.1.0 JSON schema type definitions | `src/commands/review.ts` |
+| `node-sarif-builder` | 5.0.0 | Fluent API for building compliant SARIF reports | Dependency installed |
+
+**2. Parsing & Static Analysis Layer:**
 | Package | Version | Purpose | Usage Location |
 |---|---|---|---|
 | `web-tree-sitter` | ^0.27.0 | WebAssembly Tree-sitter parser runtime | `src/analysis/parser/index.ts`, `src/analysis/symbols/index.ts` |
 | `tree-sitter-typescript` | ^0.23.2 | TypeScript / TSX language grammar | `test-wasm/tree-sitter-typescript.wasm`, `src/analysis/parser/` |
 | `tree-sitter-python` | ^0.25.0 | Python language grammar | `test-wasm/tree-sitter-python.wasm`, `src/analysis/parser/` |
 
-**Core & Repository Intelligence:**
-| Package | Version | Purpose | Usage Location |
+**3. Intelligence & Context Engine Layer:**
+- `SymbolIndex` (`src/intelligence/index/symbol-index.ts`) - In-memory multi-file symbol index with fuzzy name and range queries.
+- `ReferenceGraph` (`src/intelligence/graph/reference.ts`) - Directed graph of caller/callee and import relationships with bounded BFS traversal.
+- `DependencyGraph` (`src/intelligence/graph/dependency.ts`) - Package and module dependency tracking.
+- `ContextEngine` (`src/intelligence/context/engine.ts`) - Candidate ranking and token-budgeted snippet windowing.
+
+**4. Model Provider Layer:**
+| Package / API | Version | Purpose | Usage Location |
 |---|---|---|---|
-| `commander` | 15.0.0 | CLI routing, argument & flag parsing | `src/cli.ts`, `src/commands/*.ts` |
-| `isomorphic-git` | 1.41.9 | Pure JS Git operations (diff, statusMatrix, log, refs) | `src/repository/git.ts` |
-| `fast-glob` | 3.3.3 | Workspace package discovery across glob patterns | `src/repository/monorepo.ts` |
-| `ignore` | 7.0.8 | `.gitignore` and `.octateignore` parsing and path matching | `src/repository/ignore.ts`, `src/repository/filter.ts` |
-| `yaml` | 2.9.0 | YAML 1.2 parsing for `octate.yaml` configuration | `src/config/loader.ts` |
-| `zod` | 4.5.4 | Runtime schema validation, type inference, AOT compilation | `src/config/schema.ts`, `src/config/loader.ts` |
-| `pino` | 10.3.1 | High-throughput structured JSON logging with redaction | `src/logging/index.ts` |
-| `pino-pretty` | ^13.1.3 | Colorized human-readable logs for development mode | `src/logging/index.ts` |
-| `p-limit` | 7.3.2 | Promise concurrency limiting and pool control | `src/cache/pool.ts` |
-| `p-queue` | 7.3.2 | Priority-based promise queues (for reviewer DAGs) | Dependency installed |
-| `picocolors` | 1.1.1 | Zero-dependency terminal ANSI colors | `src/commands/review.ts` |
-| `@microsoft/sarif` | latest | SARIF v2.1.0 JSON schema type definitions | `src/commands/review.ts` |
-| `node-sarif-builder` | 5.0.0 | Fluent API for building compliant SARIF reports | Dependency installed |
+| NVIDIA API | `v1` | Nemotron 3 Ultra 550B-A55B inference | `https://integrate.api.nvidia.com/v1/chat/completions` |
+| `zod` | 4.5.4 | Runtime schema validation & AOT schema compilation | `src/model/schema/finding.ts`, `src/config/schema.ts` |
+| Native `fetch` | Built-in | HTTP client for NVIDIA chat completions | `src/model/providers/nvidia.ts` |
+| Native `AbortController` | Built-in | Request cancellation and timeout signals | `src/model/providers/resilience.ts` |
+
+**5. Review Engine Layer:**
+- `ReviewDAG` (`src/review/dag.ts`) - Concurrency-limited staged execution (Structural, Semantic, Security).
+- `CriticStage` (`src/review/critic.ts`) - Two-stage quality gate (deterministic hard floor + LLM Critic).
+- `DeduplicationEngine` (`src/review/dedup.ts`) - Multi-factor interval overlap, symbol, and keyword clustering.
+- `CompositeRanking` (`src/review/ranking.ts`) - 6-factor confidence-weighted composite ranking (0–100).
+- `ReviewEngine` (`src/review/engine.ts`) - Unified 5-stage review engine pipeline.
 
 **Subprocess Analysis Integrations (Detected & Executed):**
 - `tsc` (`npx tsc`) - TypeScript compiler static type diagnostics
@@ -112,5 +132,5 @@
 
 ---
 
-*Stack analysis: 2026-09-10*
+*Stack analysis: 2026-09-11*
 *Update after major dependency changes*

@@ -1,34 +1,34 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-09-08
+**Analysis Date:** 2026-09-11
 
 ## Naming Patterns
 
 **Files:**
-- kebab-case for all source files: `review.ts`, `discovery.test.ts`, `cache/store.ts`
+- kebab-case for all source files: `review.ts`, `discovery.test.ts`, `symbol-index.ts`, `critic.ts`
 - Test files: `[name].test.ts` co-located with source
 - Index barrels: `index.ts` for public exports
+- Types: `types.ts` for domain models, `schema.ts` for Zod schemas
 
 **Functions:**
-- camelCase: `createReviewCommand`, `findGitRoot`, `loadConfig`
+- camelCase: `createReviewCommand`, `findGitRoot`, `loadConfig`, `filterDeterministicHardFloor`, `computeCompositeScore`
 - Async functions: no special prefix, use `async` keyword
-- Factory functions: `create*`, `make*` prefix: `createCancellationController`, `createCacheStore`
+- Factory functions: `create*`, `make*` prefix: `createReviewEngine`, `createCancellationController`, `createCacheStore`, `createModelProvider`
 
 **Variables:**
-- camelCase: `repoRoot`, `configPath`, `testDir`
-- Constants: UPPER_SNAKE_CASE: `DEFAULT_CONFIG`, `TEST_DIR`
+- camelCase: `repoRoot`, `configPath`, `testDir`, `rawFindings`
+- Constants: UPPER_SNAKE_CASE: `DEFAULT_CONFIG`, `RANKING_WEIGHTS`, `SEVERITY_SCORES`
 - Private/internal: underscore prefix occasionally used but not enforced
 
 **Types/Interfaces:**
-- PascalCase: `ReviewOptions`, `ModelRequest`, `CacheEntry`, `Repository`
-- Type suffix optional: `ReviewScope` (no suffix), `ModelRequest` (Request suffix)
-- Type guards: `is*` prefix: `isRepository`, `isOctateError`, `isReviewModel`
+- PascalCase: `ReviewOptions`, `ModelRequest`, `ReviewResult`, `RankedFinding`, `CriticVerdict`
+- Type guards: `is*` prefix: `isRepository`, `isOctateError`, `isReviewModel`, `isActionableFix`
 
 **Modules/Directories:**
-- kebab-case directories: `cancellation`, `repository`, `config`
+- kebab-case directories: `cancellation`, `repository`, `intelligence`, `model`, `review`
 - Barrel exports at `index.ts` in each directory
 
-## Code Style
+## Code Style & Tooling
 
 **Formatting (Biome):**
 - Indentation: 2 spaces
@@ -41,13 +41,11 @@
 **Linting (Biome):**
 - Recommended rules: enabled
 - Correctness: error level
-- Suspicious: error level
-- Style: warn level
+- Suspicious: error level (`useAwait` strictly enforced — avoid unnecessary `async` on functions returning Promises synchronously)
+- Style: warn level (avoid `!` non-null assertions; use explicit type narrowing or assertions)
 - `noProcessEnv`: off (CLI needs process.env)
 - `noExcessiveClassesPerFile`: off
 - `useNamingConvention`: warn (strictCase: false)
-- `noNodejsModules`: off (uses Node.js built-ins)
-- `noProcessGlobal`: off
 
 **TypeScript (tsconfig.json):**
 - Target: ES2022
@@ -60,204 +58,60 @@
 - SourceMap: true
 - Path aliases: `@/*` → `./src/*`
 
-## Import Organization
-
-**Order (enforced by Biome organizeImports):**
-1. Node.js built-ins: `node:fs/promises`, `node:path`
-2. External packages: `commander`, `zod`, `pino`
-3. Internal aliases: `@/logging`, `@/errors` (via path mapping)
-4. Relative imports: `../types`, `./schema`
-
-**Path Aliases:**
-- `@/*` maps to `./src/*` (configured in tsconfig.json and jest.config.ts)
-- Used extensively: `@/logging`, `@/errors`, `@/model/types`
-
-**Import Style:**
-- Named imports preferred: `import { createLogger } from '@/logging'`
-- Type-only imports: `import type { Logger } from 'pino'`
-- Namespace imports rare: `import * as fs from 'node:fs/promises'`
-
-## Error Handling
+## Error Handling & Exit Codes
 
 **Pattern: Typed Error Hierarchy**
 - Base class: `OctateError` (extends Error) with `exitCode` and `context`
-- Specific errors per category: `ConfigurationError` (2), `RepositoryError` (3), `GitError` (3), `ParseError` (3), `AnalysisError` (3), `ContextError` (3), `ModelError` (4), `ProviderRateLimitError` (4), `ProviderTimeoutError` (4), `AuthenticationError` (4), `QuotaExceededError` (4), `ValidationError` (5), `InternalError` (5)
-- Factory functions: `createConfigurationError`, `createGitError`, etc.
-- Type guards: `isOctateError`, `isConfigurationError`, etc. for narrowing
-- JSON serialization: `toJson()` method on base class
+- Standard Exit Code Mapping:
+  - **0**: Review passed (no blocking findings)
+  - **1**: Review completed with blocking findings (e.g. Critical/High severity findings exceeding threshold)
+  - **2**: Usage or configuration error (`ConfigurationError`)
+  - **3**: Repository, Git, AST parsing, or analysis error (`RepositoryError`, `GitError`, `ParseError`, `AnalysisError`, `ContextError`)
+  - **4**: AI Model provider or network error (`ModelError`, `AuthenticationError`, `ProviderRateLimitError`, `ProviderTimeoutError`, `QuotaExceededError`)
+  - **5**: Schema validation or internal error (`ValidationError`, `InternalError`)
+- Type guards: `isOctateError`, `isConfigurationError`, `isModelError`, etc.
+- JSON serialization: `toJson()` method on base class.
 
-**Usage:**
-```typescript
-// Throwing
-throw new ConfigurationError('Invalid config', { filePath: 'octate.yaml' });
+## Architecture & Security Patterns
 
-// Catching with type guards
-if (isOctateError(error)) {
-  logger.error({ error: error.message, context: error.context }, 'Command failed');
-  process.exit(error.exitCode);
-}
-```
+### 1. Prompt Architecture & Injection Defense
+- **Sandwich Prompt Framing:** Untrusted repository code, diffs, and comments are placed inside demarcated XML-like boundaries (`<diff>`, `<context_item>`) with explicit passive instruction tags.
+- System instructions and security guardrails precede untrusted content; final review instructions and output schema follow it. Repository source content NEVER appears in trusted prompt sections.
+- **Lightweight Template Engine:** Regex interpolation (`{{variable}}`, `{{#each list}}`) in `src/model/prompts/template.ts` avoids heavyweight template libraries and arbitrary code execution.
 
-**Validation:**
-- Zod schemas for all config: `OctateConfigSchema`, `ReviewConfigSchema`
-- Strict mode: `.strict()` prevents extra properties
-- AOT compilation: `CompiledOctateConfigSchema` (Zod v4 compatible)
-- Parse with detailed errors: `z.ZodError` issues mapped to readable strings
+### 2. Schema Validation & 2-Turn Repair
+- Model responses are untrusted text until validated against compiled Zod schemas (`src/model/schema/finding.ts`).
+- JSON extraction strips markdown fences (````json ... ````) and cleans trailing commas before parsing.
+- Grounding: Line ranges are strictly checked against actual file line counts (`src/model/schema/grounding.ts`). Phantom files are dropped and out-of-bounds line numbers clamped.
+- On schema failure, actionable Zod issues are formatted into a repair prompt and retried once before throwing `ModelError` (exit code 4).
 
-## Logging
+### 3. Review DAG Scheduling & Fault Isolation
+- Staged execution: Structural reviewer runs first as baseline. Semantic and Security reviewers trigger conditionally via AST heuristics and pattern matching.
+- **Bounded Concurrency:** Concurrency is strictly bounded (2 parallel model requests, 3 parallel subprocess diagnostic runs) via `PromisePool`.
+- **Graceful Degradation:** If an individual reviewer fails or times out, surviving reviewer findings proceed to the Critic stage, and the failure is recorded as a warning in `ReviewResult.metadata.warnings`.
 
-**Framework:** Pino (v10.3.1) with `pino-pretty` for development
+### 4. Two-Stage Critic Quality Gate
+- **Stage 1 (Deterministic Hard Floor):** Rejects invalid line numbers, nonexistent files, low-confidence candidates (`< 0.6`), empty evidence arrays, and non-actionable suggestions ("fix this", "refactor") without incurring model costs.
+- **Stage 2 (LLM Critic):** Invokes `critic.v1` to verify factual truth against repository evidence and apply senior-engineer judgment.
 
-**Patterns:**
-- Root logger: `logger = createPinoLogger()`
-- Child loggers per module: `createLogger('module:name')` or `createLogger('module', bindings)`
-- Context loggers: `createContextLogger('module', { requestId: '123' })`
-- Redaction: Automatic for sensitive fields (`NVIDIA_API_KEY`, `apiKey`, `token`, `password`, `secret`, `authorization`, `x-api-key`, `apikey`)
-- Levels: `debug`, `info`, `warn`, `error`, `fatal`, `trace`
-- Development: pretty printing with colors and timestamps
-- Production: JSON output
+### 5. Multi-Factor Deduplication & Evidence Merging
+- Findings are clustered using:
+  1. File and line range interval overlap ($\pm 3$ lines tolerance)
+  2. Enclosing symbol ID + category match
+  3. Root-cause keyword overlap (e.g. `['null', 'dereference']`)
+- Merging selects the highest severity, highest confidence, strongest explanatory message, and unions up to 5 verified evidence items.
+- Runs in two phases: pre-Critic syntactic clustering (to minimize prompt token expenditure) and post-Critic consolidation.
 
-**Usage:**
-```typescript
-const logger = createLogger('commands:review');
-logger.info({ repoRoot, fileCount }, 'Starting review');
-logger.debug({ detail: '...' }, 'Debug info');
-logger.warn({ issue: '...' }, 'Warning');
-logger.error({ error: err.message, stack: err.stack }, 'Failed');
-```
-
-## Comments
-
-**When to Comment:**
-- JSDoc for all public exports (functions, classes, interfaces, types)
-- Module-level header comment describing purpose
-- Complex algorithms or non-obvious logic
-- TODO/FIXME markers for known limitations
-
-**JSDoc Style:**
-```typescript
-/**
- * Creates the review command for Commander.js.
- * @returns Commander command instance
- */
-export function createReviewCommand(): Command { ... }
-
-/**
- * Validates that exactly one scope option is provided.
- * @throws ConfigurationError if no scope or multiple scopes
- */
-function validateScope(options: ReviewOptions): void { ... }
-```
-
-**Type Documentation:**
-- Inline comments for complex type definitions
-- Zod schemas serve as runtime validation + documentation
-
-## Function Design
-
-**Size:**
-- Small, focused functions (typically < 50 lines)
-- Private helpers nested or module-scoped with `function` keyword
-- Single responsibility per function
-
-**Parameters:**
-- Options objects for multiple parameters: `ReviewOptions`, `CacheStoreOptions`, `ConfigMergerOptions`
-- Destructuring in function signature for clarity
-- Required params first, optional/config objects last
-
-**Return Values:**
-- Explicit return types for public APIs
-- `Promise<T>` for async functions
-- `never` for functions that always throw (`handleError`)
-- Early returns for guard clauses
-
-## Module Design
-
-**Exports:**
-- Named exports for all public API
-- Barrel files (`index.ts`) re-export from submodules
-- Internal implementation details not exported (or prefixed with `_`)
-
-**Barrel Pattern:**
-```typescript
-// src/logging/index.ts
-export { logger, createLogger, createContextLogger, redactionPaths };
-export type { LogLevel, RedactionPath };
-
-// src/errors/index.ts
-export { OctateError, ConfigurationError, ... };
-export { isOctateError, isConfigurationError, ... };
-export { createConfigurationError, createGitError, ... };
-```
-
-**Dependency Direction:**
-- Core domain types (`src/types`) have no dependencies
-- Utilities (`logging`, `errors`, `cancellation`, `cache`) depend only on types
-- Commands depend on utilities and repository
-- Configuration depends on logging and errors
-- Model abstraction depends only on types
-
-## Async Patterns
-
-**Cancellation:**
-- `AbortController` / `AbortSignal` standard API
-- `CancellationController` wrapper for child signals and lifecycle
-- `withCancellation(operation, signal?)` for racing against abort
-- Single controller at review use case level, propagates to all layers
-
-**Concurrency:**
-- `p-limit` for simple concurrency limiting
-- `p-queue` for priority/ordering (reviewer DAG)
-- Sequential by default, parallel explicit
-
-**Error Handling in Async:**
-- Try/catch with typed error re-throwing
-- `finally` blocks for cleanup (abort controllers, temp files)
-- `Promise.race` for cancellation vs operation
-
-## Configuration Patterns
-
-**Layered Config (precedence):**
-1. Defaults (built-in)
-2. Global (`~/.config/octate/config.yaml`)
-3. Project (`octate.yaml` at repo root)
-4. Environment variables (`OCTATE_<SECTION>_<KEY>`)
-5. CLI flags (highest)
-
-**Environment Variable Convention:**
-- Prefix: `OCTATE_`
-- Section + key: `OCTATE_REVIEW_SEVERITY=high` → `{ review: { severity: 'high' } }`
-- JSON parsing attempted, fallback to string
-- Snake_case env vars → camelCase config
-
-**Schema Validation:**
-- Zod schemas define structure + defaults
-- `.strict()` prevents unknown keys
-- Validation at each layer load + final merge
-- Detailed error messages for config issues
-
-## CLI Patterns
-
-**Commander.js Structure:**
-- `createProgram()` builds command tree
-- `create*Command()` functions per subcommand
-- `registerCommands(program)` wires them up
-- Global options merged via `preAction` hook
-- Action handlers async, return `Promise<void>`
-
-**Output Modes:**
-- Mutually exclusive: `--json`, `--sarif`, `--quiet`
-- `--output <file>` writes to file instead of stdout
-- `--no-tui` disables interactive mode
-- Default: human-readable formatted output
-
-**Exit Codes:**
-- 0: Success
-- 2: Configuration error
-- 3: Repository/Git/Parse/Analysis/Context error
-- 4: Model/Provider/Authentication/Quota error
-- 5: Validation/Internal error
+### 6. Composite Ranking & Critical Protection
+- Normalized 0–100 composite ranking:
+  - Severity: 30%
+  - Confidence: 20%
+  - Evidence Strength: 15%
+  - Blast Radius: 15% (computed via `ReferenceGraph.getIncoming` caller/dependency count)
+  - Security Impact: 10%
+  - Regression Probability: 10%
+- Findings below `minSeverity` are discarded. The top `maxFindings` are preserved, but **Critical-severity findings are never truncated**.
 
 ---
 
-*Convention analysis: 2026-09-08*
+*Convention analysis: 2026-09-11*

@@ -1,6 +1,6 @@
 # External Integrations
 
-**Analysis Date:** 2026-09-10
+**Analysis Date:** 2026-09-11
 
 ## APIs & External Services
 
@@ -8,10 +8,15 @@
 - **NVIDIA API** - Nemotron 3 Ultra 550B-A55B model
   - Endpoint: `https://integrate.api.nvidia.com/v1/chat/completions` (OpenAI-compatible)
   - Model ID: `nvidia/nemotron-3-ultra-550b-a55b`
-  - SDK/Client: Native Node.js `fetch` + `AbortController` (zero external SDK dependency)
-  - Auth: Bearer token via `NVIDIA_API_KEY` environment variable
+  - Implementation: `LocalNvidiaProvider` in `src/model/providers/nvidia.ts` conforming to `ReviewModel` abstraction (`src/model/abstraction.ts`)
+  - Transport: Native Node.js `fetch` + `AbortController` (zero external SDK dependency)
+  - Authentication: Bearer token via `NVIDIA_API_KEY` environment variable; missing key throws typed `AuthenticationError` (exit code 4)
+  - Concurrency: Bounded to 2 parallel model requests via `createPromisePool(2)`
+  - Resilience: 60s timeout, up to 3 retries on 429/5xx status codes with exponential backoff and `Retry-After` header parsing (`src/model/providers/resilience.ts`)
+  - 2-Turn Schema Repair Loop: Automatically formats Zod schema validation errors and submits repair turns to the model (`src/model/schema/repair.ts`)
+  - Grounding: Strict file path grounding and line clamping against actual repository file lengths (`src/model/schema/grounding.ts`)
+  - Prompt Templates: Markdown prompt definitions (`src/model/prompts/reviewer.structural.v1.md`, `reviewer.semantic.v1.md`, `reviewer.security.v1.md`, `critic.v1.md`) rendered via regex template engine (`src/model/prompts/template.ts`) with in-memory fallbacks (`src/model/prompts/fallbacks.ts`)
   - Health & Connectivity: Verified via `octate doctor` (`src/commands/doctor.ts:checkNvidiaConnectivity()`)
-  - Integration Boundary: `ReviewModel` abstraction (`src/model/abstraction.ts`), with planned providers `LocalNvidiaProvider` and `HostedProvider`
 
 **Language Parser WebAssembly Grammars:**
 - **Tree-sitter WASM Grammars** - Language grammar distribution
@@ -42,7 +47,7 @@ Octate executes local command-line linters, static analyzers, and test runners i
 ## Data Storage
 
 **Databases:**
-- None. Octate has no database requirements.
+- None. Octate has zero external database dependencies.
 
 **File Storage:**
 - **Local filesystem only** - Content-addressable storage at `~/.local/share/octate/{project-hash}/`
@@ -76,7 +81,7 @@ Octate executes local command-line linters, static analyzers, and test runners i
 
 **Logging:**
 - Pino structured JSON logging (`src/logging/index.ts`)
-- Child loggers created per module (`createLogger('analysis/orchestrator')`, etc.)
+- Child loggers created per module (`createLogger('review/engine')`, `createLogger('model/nvidia')`, etc.)
 - Human-readable colorized output in development via `pino-pretty`
 - Raw structured JSON output in production/automation mode
 
@@ -100,5 +105,5 @@ Octate executes local command-line linters, static analyzers, and test runners i
 
 ---
 
-*Integration audit: 2026-09-10*
+*Integration audit: 2026-09-11*
 *Update when adding or modifying external service or subprocess integrations*
