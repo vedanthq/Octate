@@ -15,14 +15,17 @@ import {
 
 describe('commands:doctor', () => {
   let originalExitCode: number | string | null | undefined;
+  const originalEnv = { ...process.env };
 
   beforeEach(() => {
     originalExitCode = process.exitCode;
     process.exitCode = undefined;
+    process.env = { ...originalEnv };
   });
 
   afterEach(() => {
     process.exitCode = originalExitCode;
+    process.env = originalEnv;
     jest.restoreAllMocks();
   });
 
@@ -103,6 +106,7 @@ describe('commands:doctor', () => {
 
   describe('checkNvidiaConnectivity', () => {
     it('returns warn with offline mode when NVIDIA_API_KEY is not set', async () => {
+      delete process.env.NVIDIA_API_KEY;
       const result = await checkNvidiaConnectivity(undefined);
       expect(result.status).toBe('warn');
       expect(result.message).toContain('NVIDIA_API_KEY not set (offline review mode only)');

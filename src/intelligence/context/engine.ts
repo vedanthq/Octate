@@ -101,9 +101,21 @@ export class ContextEngine {
     const chunks = diff.split(/(?=^diff --git )/m);
     if (chunks.length <= 1) {
       // Single massive file diff, truncate directly
+      const warning = '\n\n// Warning: Diff truncated to stay within token budget ceiling.';
+      const warningTokens = estimateTokens(warning);
+      const targetBudget = Math.max(0, maxDiffTokens - warningTokens);
       const lines = diff.split('\n');
-      const allowedLines = Math.floor(maxDiffTokens * 3.0);
-      return `${lines.slice(0, allowedLines).join('\n')}\n\n// Warning: Diff truncated to stay within token budget ceiling.`;
+      const keptLines: string[] = [];
+      let currentLength = 0;
+      const maxChars = Math.floor((targetBudget / 1.1) * 3.8);
+      for (const line of lines) {
+        if (currentLength + line.length + 1 > maxChars) {
+          break;
+        }
+        keptLines.push(line);
+        currentLength += line.length + 1;
+      }
+      return `${keptLines.join('\n')}${warning}`;
     }
 
     // Classify and sort chunks: logic files first, then tests, deprioritize lockfiles/generated
@@ -129,12 +141,16 @@ export class ContextEngine {
 
     scoredChunks.sort((a, b) => a.priority - b.priority);
 
+    // Reserve headroom for warning message
+    const warningReservation = 40;
+    const chunkBudget = Math.max(0, maxDiffTokens - warningReservation);
+
     const keptChunks: string[] = [];
     let accumulatedTokens = 0;
     let omittedCount = 0;
 
     for (const sc of scoredChunks) {
-      if (accumulatedTokens + sc.tokens <= maxDiffTokens) {
+      if (accumulatedTokens + sc.tokens <= chunkBudget) {
         keptChunks.push(sc.chunk);
         accumulatedTokens += sc.tokens;
       } else {

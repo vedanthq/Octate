@@ -459,7 +459,12 @@ async function readBlobAtCommit(
 export async function getStagedDiff(repoRoot: string): Promise<string> {
   try {
     const gitDir = await findGitDir(repoRoot);
-    const headOid = await resolveRef(repoRoot, 'HEAD');
+    let headOid: string | null = null;
+    try {
+      headOid = await resolveRef(repoRoot, 'HEAD');
+    } catch {
+      headOid = null;
+    }
 
     // Use statusMatrix to find staged changes
     const matrix = await git.statusMatrix({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir });
@@ -482,7 +487,7 @@ export async function getStagedDiff(repoRoot: string): Promise<string> {
           try {
             const filePath = path.join(repoRoot, filepath);
             const content = await fs.readFile(filePath, 'utf-8');
-            if (status === 'added') {
+            if (status === 'added' || !headOid) {
               diff = generateAddedDiff(filepath, content);
             } else {
               // Read from HEAD for comparison
@@ -498,7 +503,9 @@ export async function getStagedDiff(repoRoot: string): Promise<string> {
           }
         } else {
           // Deleted file - read from HEAD
-          const headContent = await readBlobAtCommit(repoRoot, gitDir, headOid, filepath);
+          const headContent = headOid
+            ? await readBlobAtCommit(repoRoot, gitDir, headOid, filepath)
+            : null;
           if (headContent !== null) {
             diff = generateDeletedDiff(filepath, headContent);
           } else {
@@ -528,53 +535,53 @@ export async function getWorkingDiff(repoRoot: string): Promise<string> {
 
     // Use statusMatrix to find working tree changes
     const matrix = await git.statusMatrix({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir });
-    const headOid = await resolveRef(repoRoot, 'HEAD');
+    let headOid: string | null = null;
+    try {
+      headOid = await resolveRef(repoRoot, 'HEAD');
+    } catch {
+      headOid = null;
+    }
 
     const diffs: string[] = [];
 
     for (const entry of matrix) {
       const filepath = entry[0];
       const _headStatus = entry[1];
-      const workdirStatus = entry[2] as 0 | 1 | 2 | 3;
+      const workdirStatus = entry[2] as 0 | 1 | 2;
       const stageStatus = entry[3] as 0 | 1 | 2 | 3;
-      // workdirStatus: 0 = unmodified, 1 = modified, 2 = added, 3 = deleted
-      // Only include if working tree differs from index
-      if (workdirStatus !== 0 && workdirStatus !== stageStatus) {
-        const status: FileChange['status'] =
-          workdirStatus === 2 ? 'added' : workdirStatus === 3 ? 'deleted' : 'modified';
 
+      if (workdirStatus === 0 && stageStatus !== 0) {
+        // Deleted in working tree
         let diff = '';
-        if (status !== 'deleted') {
-          try {
-            const filePath = path.join(repoRoot, filepath);
-            const content = await fs.readFile(filePath, 'utf-8');
-
-            if (status === 'added') {
-              diff = generateAddedDiff(filepath, content);
-            } else {
-              // Compare with staged version (index)
-              // For staged files, we need to read from index
-              // We'll use HEAD as approximation for now
-              const indexContent = await readBlobAtCommit(repoRoot, gitDir, headOid, filepath);
-              if (indexContent !== null) {
-                diff = generateUnifiedDiff(filepath, indexContent, content);
-              } else {
-                diff = generateAddedDiff(filepath, content);
-              }
-            }
-          } catch {
-            diff = `# Binary file ${filepath} differs\n`;
-          }
+        const indexContent = headOid
+          ? await readBlobAtCommit(repoRoot, gitDir, headOid, filepath)
+          : null;
+        if (indexContent !== null) {
+          diff = generateDeletedDiff(filepath, indexContent);
         } else {
-          // Deleted in working tree
-          const indexContent = await readBlobAtCommit(repoRoot, gitDir, headOid, filepath);
-          if (indexContent !== null) {
-            diff = generateDeletedDiff(filepath, indexContent);
-          } else {
-            diff = `# Binary file ${filepath} deleted\n`;
-          }
+          diff = `# Binary file ${filepath} deleted\n`;
         }
+        diffs.push(diff);
+      } else if (workdirStatus === 2) {
+        // Added or modified in working tree
+        let diff = '';
+        try {
+          const filePath = path.join(repoRoot, filepath);
+          const content = await fs.readFile(filePath, 'utf-8');
 
+          if (stageStatus === 0 || !headOid) {
+            diff = generateAddedDiff(filepath, content);
+          } else {
+            const indexContent = await readBlobAtCommit(repoRoot, gitDir, headOid, filepath);
+            if (indexContent !== null) {
+              diff = generateUnifiedDiff(filepath, indexContent, content);
+            } else {
+              diff = generateAddedDiff(filepath, content);
+            }
+          }
+        } catch {
+          diff = `# Binary file ${filepath} differs\n`;
+        }
         diffs.push(diff);
       }
     }
