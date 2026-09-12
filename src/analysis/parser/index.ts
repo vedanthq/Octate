@@ -2,6 +2,7 @@
  * Tree-sitter WASM parser with eager language loading.
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Language, Parser } from 'web-tree-sitter';
@@ -21,6 +22,41 @@ export interface ParserState {
   languages: Map<string, Language>;
 }
 
+/**
+ * Resolves the filesystem path for a Tree-sitter WASM grammar file (D-09).
+ * Prioritizes production distribution (dist/wasm/), then development (test-wasm/),
+ * then CWD fallback.
+ */
+export function resolveWasmPath(filename: string): string {
+  // 1. Check production distribution layout: dist/wasm/<filename>
+  const prodPath = path.resolve(__dirname, '../../wasm', filename);
+  if (fs.existsSync(prodPath)) {
+    return prodPath;
+  }
+
+  // 2. Check development source layout: test-wasm/<filename>
+  const devPath = path.resolve(__dirname, '../../../test-wasm', filename);
+  if (fs.existsSync(devPath)) {
+    return devPath;
+  }
+
+  // 3. Check CWD fallback
+  const cwdPath = path.resolve(process.cwd(), 'test-wasm', filename);
+  if (fs.existsSync(cwdPath)) {
+    return cwdPath;
+  }
+
+  // 4. Check dist/wasm in CWD
+  const cwdDistPath = path.resolve(process.cwd(), 'dist/wasm', filename);
+  if (fs.existsSync(cwdDistPath)) {
+    return cwdDistPath;
+  }
+
+  throw new Error(
+    `Tree-sitter WASM grammar not found: ${filename}. Checked: ${prodPath}, ${devPath}, ${cwdPath}`
+  );
+}
+
 export async function initParser(): Promise<ParserState> {
   if (parserInstance && languageMap) {
     return { parser: parserInstance, languages: languageMap };
@@ -32,14 +68,14 @@ export async function initParser(): Promise<ParserState> {
   parserInstance = new Parser();
   languageMap = new Map();
 
-  // Load language WASM files from local test-wasm directory
-  const wasmDir = path.resolve(__dirname, '../../../test-wasm');
-
-  const tsLanguage = await Language.load(path.join(wasmDir, 'tree-sitter-typescript.wasm'));
+  // Load language WASM files with dynamic path resolution
+  const tsWasm = resolveWasmPath('tree-sitter-typescript.wasm');
+  const tsLanguage = await Language.load(tsWasm);
   languageMap.set('typescript', tsLanguage);
   languageMap.set('javascript', tsLanguage);
 
-  const pyLanguage = await Language.load(path.join(wasmDir, 'tree-sitter-python.wasm'));
+  const pyWasm = resolveWasmPath('tree-sitter-python.wasm');
+  const pyLanguage = await Language.load(pyWasm);
   languageMap.set('python', pyLanguage);
 
   log.debug('Tree-sitter parser initialized with languages: %o', Array.from(languageMap.keys()));

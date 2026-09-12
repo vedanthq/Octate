@@ -9,8 +9,16 @@
   "bin": {
     "octate": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-wasm.cjs && chmod +x dist/cli.js",
+    "copy:wasm": "node scripts/copy-wasm.cjs",
+    "pack:check": "npm run build && npm pack --dry-run",
+    "bench": "tsx scripts/bench.ts",
     "dev": "tsx watch src/cli.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",

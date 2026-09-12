@@ -39,6 +39,19 @@
     "ignoreUnknown": false,
     "experimentalScannerIgnores": ["dist/", "node_modules/", "coverage/", ".opencode/", ".planning/"]
   },
+  "overrides": [
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off",
+            "useStrictMode": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "enabled": true,
     "actions": {
