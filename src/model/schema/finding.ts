@@ -90,36 +90,117 @@ const compiledFindingsValidator = z.compile(FindingsPayloadSchema);
 
 /**
  * Canonical JSON schema description passed to LLMs in prompt templates.
+ * Conforms to standard JSON Schema format.
  */
 export const FINDINGS_OUTPUT_SCHEMA = JSON.stringify(
   {
-    findings: [
-      {
-        severity: 'critical | high | medium | low | info',
-        category:
-          'correctness | security | performance | architecture | reliability | maintainability | compatibility | testing',
-        title: 'Concise summary of issue',
-        message: 'Detailed explanation of the issue and why it matters',
-        file: 'path/to/file.ext',
-        startLine: 1,
-        endLine: 1,
-        confidence: 0.95,
-        evidence: [
-          {
-            file: 'path/to/file.ext',
-            startLine: 1,
-            endLine: 1,
-            relationship: 'defines | calls | imports | modifies',
-            explanation: 'Why this code is evidence of the issue',
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    type: 'object',
+    properties: {
+      findings: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            severity: {
+              type: 'string',
+              enum: ['critical', 'high', 'medium', 'low', 'info'],
+              description: 'Defect severity level',
+            },
+            category: {
+              type: 'string',
+              enum: [
+                'correctness',
+                'security',
+                'performance',
+                'architecture',
+                'reliability',
+                'maintainability',
+                'compatibility',
+                'testing',
+              ],
+              description: 'Category of the defect',
+            },
+            title: {
+              type: 'string',
+              description: 'Concise summary of the defect (under 80 characters)',
+            },
+            message: {
+              type: 'string',
+              description: 'Detailed explanation of why this is an issue and how to resolve it',
+            },
+            file: {
+              type: 'string',
+              description: 'Repository-relative path of the affected file',
+            },
+            startLine: {
+              type: 'integer',
+              minimum: 1,
+              description: 'Starting line number of the defect (1-indexed)',
+            },
+            endLine: {
+              type: 'integer',
+              minimum: 1,
+              description: 'Ending line number of the defect (1-indexed)',
+            },
+            confidence: {
+              type: 'number',
+              minimum: 0,
+              maximum: 1,
+              description: 'Confidence score from 0.0 to 1.0',
+            },
+            evidence: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  file: { type: 'string' },
+                  startLine: { type: 'integer', minimum: 1 },
+                  endLine: { type: 'integer', minimum: 1 },
+                  relationship: { type: 'string' },
+                  explanation: { type: 'string' },
+                },
+                required: ['file', 'startLine', 'endLine'],
+              },
+              description: 'Inspectable evidence anchors verifying this finding',
+            },
+            relatedFiles: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Paths to related files',
+            },
+            relatedSymbols: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Names of relevant symbols or functions',
+            },
+            impact: {
+              type: 'string',
+              description: 'Concrete real-world operational or security impact',
+            },
+            suggestedFix: {
+              type: 'string',
+              description: 'Concrete replacement code or actionable remediation steps',
+            },
+            reviewer: {
+              type: 'string',
+              enum: ['structural', 'semantic', 'security'],
+              description: 'Reviewer role that originated this finding',
+            },
           },
-        ],
-        relatedFiles: ['path/to/file.ext'],
-        relatedSymbols: ['functionOrClassName'],
-        impact: 'Real-world runtime or security impact',
-        suggestedFix: 'Concrete remediation instructions or replacement code (must be actionable)',
-        reviewer: 'structural | semantic | security',
+          required: [
+            'severity',
+            'category',
+            'title',
+            'message',
+            'file',
+            'startLine',
+            'endLine',
+          ],
+        },
       },
-    ],
+    },
+    required: ['findings'],
   },
   null,
   2
