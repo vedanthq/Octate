@@ -16,8 +16,8 @@
 - [x] **Phase 4: Model Provider** — NVIDIA adapter, versioned prompts, schema validation, prompt injection protection
 - [x] **Phase 5: Review Engine** — Review DAG (Structural/Semantic/Security reviewers → Critic → Dedup → Ranking)
 - [x] **Phase 6: Application Layer** — ReviewUseCase orchestration, progress streaming, cancellation, exit codes
-- [ ] **Phase 7: Terminal Presentation** — Interactive TUI workspace, JSON/SARIF/quiet renderers
-- [ ] **Phase 8: CLI Integration, Polish & Evaluation** — Full command set, doctor, evaluation fixtures, performance validation
+- [x] **Phase 7: Terminal Presentation** — Interactive TUI workspace, JSON/SARIF/quiet renderers
+- [x] **Phase 8: CLI Integration, Polish & Evaluation** — Full command set, doctor, evaluation fixtures, performance validation
 
 ---
 
@@ -165,13 +165,13 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 08-01-PLAN.md — Doctor Diagnostics & CLI Hardening (CONF-01, REPO-01, ANAL-01, PARSE-01, MODEL-01)
+- [x] 08-01-PLAN.md — Doctor Diagnostics & CLI Hardening (CONF-01, REPO-01, ANAL-01, PARSE-01, MODEL-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 08-02-PLAN.md — Golden Review Testbed & Negative Pairing (REV-01, REV-02, REV-03, REV-04)
+- [x] 08-02-PLAN.md — Golden Review Testbed & Negative Pairing (REV-01, REV-02, REV-03, REV-04)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 08-03-PLAN.md — Packaging, Benchmarking & Documentation (OUT-01, OUT-02, CONF-02, CACHE-01..03, TUI-01..03)
+- [x] 08-03-PLAN.md — Packaging, Benchmarking & Documentation (OUT-01, OUT-02, CONF-02, CACHE-01..03, TUI-01..03)
 **UI hint**: yes
 
 ---
@@ -187,7 +187,7 @@ Plans:
 | 5. Review Engine | 3/3 | Complete | 2026-09-10 |
 | 6. Application Layer | 3/3 | Complete | 2026-09-11 |
 | 7. Terminal Presentation | 3/3 | Complete | 2026-09-11 |
-| 8. CLI Integration, Polish & Evaluation | 0/3 | In progress | - |
+| 8. CLI Integration, Polish & Evaluation | 3/3 | Complete | 2026-09-12 |
 
 ---
 
