@@ -83,21 +83,39 @@ export function spawnWithSignal(
       });
     }
 
+    let timedOut = false;
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
 
     if (timeout) {
       timeoutHandle = setTimeout(() => {
+        timedOut = true;
         child.kill('SIGTERM');
-        setTimeout(() => {
+        killTimer = setTimeout(() => {
           if (!child.killed) {
             child.kill('SIGKILL');
           }
         }, 5000);
+        killTimer.unref();
       }, timeout);
+      timeoutHandle.unref();
     }
 
+    let abortHandler: (() => void) | undefined;
+
     const cleanup = () => {
-      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = undefined;
+      }
+      if (killTimer) {
+        clearTimeout(killTimer);
+        killTimer = undefined;
+      }
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+        abortHandler = undefined;
+      }
     };
 
     child.on('error', (error: Error) => {
@@ -111,11 +129,12 @@ export function spawnWithSignal(
     });
 
     child.on('close', (code: number | null, closeSignal: string | null) => {
+      const wasTimedOut = timedOut;
       cleanup();
 
       if (closeSignal === 'SIGTERM' || closeSignal === 'SIGKILL') {
         // Check if this was due to our timeout
-        if (timeout && timeoutHandle) {
+        if (wasTimedOut) {
           reject(
             new SubprocessError(`${command} timed out after ${timeout}ms`, {
               signal: closeSignal,
@@ -156,14 +175,15 @@ export function spawnWithSignal(
 
     // Handle abort signal
     if (signal) {
-      const abortHandler = () => {
+      abortHandler = () => {
         if (!child.killed) {
           child.kill('SIGTERM');
-          setTimeout(() => {
+          killTimer = setTimeout(() => {
             if (!child.killed) {
               child.kill('SIGKILL');
             }
           }, 5000);
+          killTimer.unref();
         }
       };
 

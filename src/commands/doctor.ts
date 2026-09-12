@@ -301,6 +301,7 @@ export async function checkNvidiaConnectivity(
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
+    timeoutId.unref();
 
     let response: Response;
     try {

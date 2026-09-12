@@ -46,6 +46,7 @@ export function copyViaOsCommand(text: string): Promise<boolean> {
         }
         resolve(false);
       }, 2000);
+      timer.unref();
 
       child.on('error', () => {
         clearTimeout(timer);

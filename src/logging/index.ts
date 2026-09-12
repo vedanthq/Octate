@@ -21,7 +21,7 @@ const redactionPaths = [
  * Determines if we're in development mode.
  */
 function isDevelopmentMode(): boolean {
-  return process.env.NODE_ENV !== 'production';
+  return process.env.NODE_ENV === 'development';
 }
 
 /**

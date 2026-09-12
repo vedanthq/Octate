@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
@@ -18,7 +18,6 @@ export async function findConfigFile(startDir: string = process.cwd()): Promise<
   while (true) {
     const configPath = join(currentDir, 'octate.yaml');
     try {
-      const { stat } = await import('node:fs/promises');
       await stat(configPath);
       return configPath;
     } catch {

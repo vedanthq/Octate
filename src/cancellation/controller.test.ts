@@ -104,7 +104,13 @@ describe('withCancellation', () => {
 
     const promise = withCancellation(async (signal) => {
       receivedSignal = signal;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 100);
+        signal.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(signal.reason);
+        }, { once: true });
+      });
       return 'done';
     }, controller.signal);
 

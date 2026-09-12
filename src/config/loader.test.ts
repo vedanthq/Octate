@@ -22,8 +22,16 @@ describe('config/loader', () => {
 
   afterEach(async () => {
     process.chdir(originalCwd);
-    process.env.HOME = originalHome;
-    process.env.XDG_CONFIG_HOME = originalXdgConfig;
+    if (originalHome !== undefined) {
+      process.env.HOME = originalHome;
+    } else {
+      delete process.env.HOME;
+    }
+    if (originalXdgConfig !== undefined) {
+      process.env.XDG_CONFIG_HOME = originalXdgConfig;
+    } else {
+      delete process.env.XDG_CONFIG_HOME;
+    }
     await rm(testDir, { recursive: true, force: true });
   });
 
