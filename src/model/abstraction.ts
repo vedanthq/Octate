@@ -27,7 +27,7 @@ export const defaultReviewModel: ReviewModelInterface = {
    * @param _request - Structured request with trusted/untrusted separation
    * @returns Promise resolving to validated model response
    */
-  generate(_request: ModelRequest): Promise<ModelResponse> {
+  generate(_request: ModelRequest, _signal?: AbortSignal): Promise<ModelResponse> {
     return Promise.reject(new Error('ReviewModel.generate() must be implemented by provider'));
   },
 };

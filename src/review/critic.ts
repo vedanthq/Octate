@@ -258,7 +258,7 @@ export async function executeCriticStage(params: CriticParams): Promise<CriticRe
   // 4. Model Call with Failure Resilience & Quality Gate Retry (D-07)
   try {
     signal?.throwIfAborted();
-    criticResponse = await params.model.generate(criticRequest);
+    criticResponse = await params.model.generate(criticRequest, signal);
     accumulateUsage(usage, criticResponse.usage);
   } catch (error) {
     if (isAbortError(error, signal)) {
@@ -279,7 +279,7 @@ export async function executeCriticStage(params: CriticParams): Promise<CriticRe
           criticRequest.reviewTask +
           '\n\nCRITICAL RETRY INSTRUCTION: The previous output failed validation. You must respond strictly with valid JSON conforming to the findings schema: an array of findings with severity, category, title, message, file, startLine, endLine, confidence, evidence, impact, suggestedFix, reviewer.',
       };
-      criticResponse = await params.model.generate(retryRequest);
+      criticResponse = await params.model.generate(retryRequest, signal);
       accumulateUsage(usage, criticResponse.usage);
     } catch (retryError) {
       if (isAbortError(retryError, signal)) {

@@ -207,7 +207,7 @@ export async function executeReviewDAG(params: DAGParams): Promise<DAGResult> {
   signal?.throwIfAborted();
   try {
     const structuralRequest = buildModelRequest('structural', params);
-    const structuralResponse = await pool.run(() => model.generate(structuralRequest));
+    const structuralResponse = await pool.run(() => model.generate(structuralRequest, signal));
 
     for (const finding of structuralResponse.findings) {
       findings.push({
@@ -242,7 +242,7 @@ export async function executeReviewDAG(params: DAGParams): Promise<DAGResult> {
         try {
           signal?.throwIfAborted();
           const request = buildModelRequest(role, params);
-          const response = await pool.run(() => model.generate(request));
+          const response = await pool.run(() => model.generate(request, signal));
 
           for (const finding of response.findings) {
             findings.push({

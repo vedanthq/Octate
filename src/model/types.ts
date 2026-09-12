@@ -152,9 +152,10 @@ export interface ReviewModel {
   /**
    * Generates a response for the given request.
    * @param request - Structured model request with trusted/untrusted separation
+   * @param signal - Optional AbortSignal for request cancellation
    * @returns Promise resolving to structured response
    */
-  generate(request: ModelRequest): Promise<ModelResponse>;
+  generate(request: ModelRequest, signal?: AbortSignal): Promise<ModelResponse>;
 }
 
 /**
