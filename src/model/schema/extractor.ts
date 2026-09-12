@@ -27,8 +27,21 @@ export function extractJsonFromText(rawText: string): string {
   }
 
   // 2. Find outermost JSON boundaries ({...} or [...])
-  const firstBrace = text.indexOf('{');
+  let firstBrace = text.indexOf('{');
   const firstBracket = text.indexOf('[');
+
+  // If there's a spurious duplicate leading brace (e.g. "{\n{" or "{\n  {\"findings\""),
+  // skip past the initial spurious '{' to the actual JSON root.
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    while (firstBrace !== -1) {
+      const rest = text.slice(firstBrace + 1).trimStart();
+      if (rest.startsWith('{')) {
+        firstBrace = text.indexOf('{', firstBrace + 1);
+      } else {
+        break;
+      }
+    }
+  }
 
   let startIndex = -1;
   let endIndex = -1;
@@ -59,6 +72,67 @@ export function extractJsonFromText(rawText: string): string {
 }
 
 /**
+ * Attempts to repair truncated JSON arrays/objects from LLMs when output tokens are exhausted.
+ */
+export function tryRepairTruncatedJson(str: string): string | null {
+  if (!str || typeof str !== 'string') return null;
+
+  // Find the last complete object boundary '}'
+  const lastBrace = str.lastIndexOf('}');
+  if (lastBrace === -1) return null;
+
+  // Truncate cleanly after the last complete object
+  let sliced = str.slice(0, lastBrace + 1).trim();
+  sliced = sliced.replace(/,(\s*)$/, '$1');
+
+  // Track unclosed braces and brackets
+  const stack: string[] = [];
+  let inString = false;
+  let escape = false;
+
+  for (let i = 0; i < sliced.length; i++) {
+    const char = sliced[i];
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (char === '\\') {
+        escape = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      } else if (char === '{') {
+        stack.push('}');
+      } else if (char === '[') {
+        stack.push(']');
+      } else if (char === '}' || char === ']') {
+        if (stack.length > 0 && stack[stack.length - 1] === char) {
+          stack.pop();
+        }
+      }
+    }
+  }
+
+  if (stack.length === 0) {
+    return null;
+  }
+
+  // Close remaining unclosed delimiters in reverse order
+  const closing = stack.reverse().join('');
+  let candidate = `${sliced}\n${closing}`;
+  candidate = candidate.replace(/,(\s*[}\]])/g, '$1');
+
+  try {
+    JSON.parse(candidate);
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Safely parses a potentially malformed or conversational JSON string.
  *
  * @param rawText - Raw text containing JSON
@@ -80,13 +154,37 @@ export function safeJsonParse<T = unknown>(
       return { success: true, data };
     } catch (parseErr) {
       try {
-        // Fallback: convert single quotes around keys/strings to double quotes
+        // Fallback 1: convert single quotes around keys/strings to double quotes
         const singleQuoteFixed = extracted.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"');
         const data = JSON.parse(singleQuoteFixed) as T;
         return { success: true, data };
       } catch {
-        // Fall through to original parse error
+        // Fall through
       }
+
+      try {
+        // Fallback 2: repair truncated JSON
+        const repaired = tryRepairTruncatedJson(extracted);
+        if (repaired) {
+          const data = JSON.parse(repaired) as T;
+          return { success: true, data };
+        }
+      } catch {
+        // Fall through
+      }
+
+      try {
+        // Fallback 3: repair truncated JSON with single quotes converted
+        const singleQuoteFixed = extracted.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"');
+        const repaired = tryRepairTruncatedJson(singleQuoteFixed);
+        if (repaired) {
+          const data = JSON.parse(repaired) as T;
+          return { success: true, data };
+        }
+      } catch {
+        // Fall through
+      }
+
       throw parseErr;
     }
   } catch (err) {

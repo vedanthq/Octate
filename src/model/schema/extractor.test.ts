@@ -75,4 +75,41 @@ describe('safeJsonParse', () => {
     const result = safeJsonParse(raw);
     expect(result.success).toBe(false);
   });
+
+  it('handles duplicate leading braces from LLMs', () => {
+    const raw = '{\n{"findings": [{"id": 1}], "status": "ok"}';
+    const result = safeJsonParse<{ findings: Array<{ id: number }>; status: string }>(raw);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.findings).toEqual([{ id: 1 }]);
+      expect(result.data.status).toBe('ok');
+    }
+  });
+
+  it('salvages truncated JSON arrays where token limit was reached', () => {
+    const raw = `\`\`\`json
+{
+  "findings": [
+    {
+      "id": "1",
+      "severity": "critical",
+      "message": "Hardcoded secret"
+    },
+    {
+      "id": "2",
+      "severity": "high",
+      "message": "Command injection"
+    },
+    {
+      "id": "3",
+      "severity": "medium",
+      "message": "Truncat`;
+    const result = safeJsonParse<{ findings: Array<{ id: string; severity: string; message: string }> }>(raw);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.findings).toHaveLength(2);
+      expect(result.data.findings[0]?.id).toBe('1');
+      expect(result.data.findings[1]?.id).toBe('2');
+    }
+  });
 });
