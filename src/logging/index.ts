@@ -66,11 +66,13 @@ function createPinoLogger(options: LoggerOptions = {}): Logger {
         colorize: true,
         translateTime: 'HH:MM:ss Z',
         ignore: 'pid,hostname',
+        destination: 2,
       },
     };
+    return pino(loggerOptions);
   }
 
-  return pino(loggerOptions);
+  return pino(loggerOptions, process.stderr);
 }
 
 /**

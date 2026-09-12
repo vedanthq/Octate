@@ -157,6 +157,57 @@ describe('resolveScope', () => {
       expect(scope.files.length).toBeGreaterThanOrEqual(2);
     });
 
+    it('resolves range with relative refs HEAD~1..HEAD', async () => {
+      const scope = await resolveScope({
+        type: 'range',
+        repoRoot: testDir,
+        base: 'HEAD~1',
+        head: 'HEAD',
+      });
+
+      expect(scope.type).toBe('range');
+      expect(scope.base).toBe('HEAD~1');
+      expect(scope.head).toBe('HEAD');
+      expect(scope.files.length).toBe(1);
+      expect(scope.files[0]!.path).toBe('file2.ts');
+    });
+
+    it('resolves range with short SHAs', async () => {
+      const scope = await resolveScope({
+        type: 'range',
+        repoRoot: testDir,
+        base: head1Oid.slice(0, 7),
+        head: head2Oid.slice(0, 7),
+      });
+
+      expect(scope.type).toBe('range');
+      expect(scope.files.length).toBe(1);
+      expect(scope.files[0]!.path).toBe('file2.ts');
+    });
+
+    it('resolves three-dot range using merge base', async () => {
+      // Create a branch from initial commit
+      await git.branch({ fs, dir: testDir, ref: 'other-branch', object: headOid });
+      await git.checkout({ fs, dir: testDir, ref: 'other-branch' });
+      await fs.writeFile(path.join(testDir, 'other.ts'), 'export const other = true;\n');
+      await git.add({ fs, dir: testDir, filepath: 'other.ts' });
+      await git.commit({ fs, dir: testDir, message: 'Other branch commit' });
+
+      // Review other-branch...HEAD (merge base should be headOid)
+      const scope = await resolveScope({
+        type: 'range',
+        repoRoot: testDir,
+        base: head2Oid,
+        head: 'HEAD',
+        isThreeDot: true,
+      });
+
+      expect(scope.type).toBe('range');
+      // Merge base should resolve to initial commit (headOid)
+      expect(scope.base).toBe(headOid);
+      expect(scope.diff).toContain('other.ts');
+    });
+
     it('throws when base or head not provided', async () => {
       await expect(
         resolveScope({ type: 'range', repoRoot: testDir, base: headOid })

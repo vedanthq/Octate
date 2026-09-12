@@ -65,6 +65,80 @@ describe('Git operations', () => {
       expect(resolved).toBe(oid);
     });
 
+    it('resolves short SHA', async () => {
+      const headOid = await resolveRef(testDir, 'HEAD');
+      const shortOid = headOid.slice(0, 7);
+      const resolved = await resolveRef(testDir, shortOid);
+      expect(resolved).toBe(headOid);
+    });
+
+    it('resolves relative ref HEAD~1', async () => {
+      const commits = await getLog(testDir, { depth: 2 });
+      const expectedInitialOid = commits[1]!.oid;
+      const resolved = await resolveRef(testDir, 'HEAD~1');
+      expect(resolved).toBe(expectedInitialOid);
+    });
+
+    it('resolves relative ref HEAD^', async () => {
+      const commits = await getLog(testDir, { depth: 2 });
+      const expectedInitialOid = commits[1]!.oid;
+      const resolved = await resolveRef(testDir, 'HEAD^');
+      expect(resolved).toBe(expectedInitialOid);
+    });
+
+    it('resolves relative ref with short SHA base', async () => {
+      const commits = await getLog(testDir, { depth: 2 });
+      const headShort = commits[0]!.oid.slice(0, 7);
+      const expectedInitialOid = commits[1]!.oid;
+      const resolved = await resolveRef(testDir, `${headShort}~1`);
+      expect(resolved).toBe(expectedInitialOid);
+    });
+
+    it('resolves multi-step ancestors HEAD~2', async () => {
+      // Add a third commit
+      await fs.writeFile(path.join(testDir, 'file2.ts'), 'export const b = 2;\n');
+      await git.add({ fs, dir: testDir, filepath: 'file2.ts' });
+      await git.commit({ fs, dir: testDir, message: 'Add file2' });
+
+      const commits = await getLog(testDir, { depth: 3 });
+      const initialOid = commits[2]!.oid;
+      const resolved = await resolveRef(testDir, 'HEAD~2');
+      expect(resolved).toBe(initialOid);
+
+      const resolvedChained = await resolveRef(testDir, 'HEAD^^');
+      expect(resolvedChained).toBe(initialOid);
+    });
+
+    it('resolves zero modifier HEAD~0 and HEAD^0 to commit itself', async () => {
+      const headOid = await resolveRef(testDir, 'HEAD');
+      expect(await resolveRef(testDir, 'HEAD~0')).toBe(headOid);
+      expect(await resolveRef(testDir, 'HEAD^0')).toBe(headOid);
+    });
+
+    it('throws when stepping past root commit', async () => {
+      await expect(resolveRef(testDir, 'HEAD~99')).rejects.toThrow('reached root commit');
+    });
+
+    it('throws when empty repository has no commits', async () => {
+      const emptyDir = await fs.mkdtemp(path.join('/tmp', 'octate-empty-test-'));
+      try {
+        await git.init({ fs, dir: emptyDir });
+        await expect(resolveRef(emptyDir, 'HEAD')).rejects.toThrow('Repository has no commits');
+      } finally {
+        await fs.rm(emptyDir, { recursive: true, force: true });
+      }
+    });
+
+    it('throws for empty or whitespace ref', async () => {
+      await expect(resolveRef(testDir, '')).rejects.toThrow('Git reference cannot be empty');
+      await expect(resolveRef(testDir, '   ')).rejects.toThrow('Git reference cannot be empty');
+    });
+
+    it('throws for invalid modifier syntax', async () => {
+      await expect(resolveRef(testDir, 'HEAD~foo')).rejects.toThrow('Invalid revision syntax');
+      await expect(resolveRef(testDir, '~1')).rejects.toThrow('missing base revision');
+    });
+
     it('throws for invalid ref', async () => {
       await expect(resolveRef(testDir, 'invalid-ref-12345')).rejects.toThrow();
     });
@@ -177,6 +251,11 @@ describe('Git operations', () => {
       expect(diff).toContain('staged-file.txt');
       expect(diff).toContain('+staged content');
     });
+
+    it('returns empty string when nothing is staged', async () => {
+      const diff = await getStagedDiff(testDir);
+      expect(diff.trim()).toBe('');
+    });
   });
 
   describe('getWorkingDiff', () => {
@@ -193,6 +272,14 @@ describe('Git operations', () => {
       const diff = await getWorkingDiff(testDir);
       expect(diff).toContain('unstaged.txt');
       expect(diff).toContain('+unstaged');
+    });
+
+    it('returns empty string when changes are staged and working tree matches index', async () => {
+      await fs.writeFile(path.join(testDir, 'only-staged.txt'), 'content\n');
+      await git.add({ fs, dir: testDir, filepath: 'only-staged.txt' });
+
+      const workingDiff = await getWorkingDiff(testDir);
+      expect(workingDiff.trim()).toBe('');
     });
   });
 });

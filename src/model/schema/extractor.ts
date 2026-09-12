@@ -75,8 +75,20 @@ export function safeJsonParse<T = unknown>(
         error: new Error('No JSON structure found in text'),
       };
     }
-    const data = JSON.parse(extracted) as T;
-    return { success: true, data };
+    try {
+      const data = JSON.parse(extracted) as T;
+      return { success: true, data };
+    } catch (parseErr) {
+      try {
+        // Fallback: convert single quotes around keys/strings to double quotes
+        const singleQuoteFixed = extracted.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"');
+        const data = JSON.parse(singleQuoteFixed) as T;
+        return { success: true, data };
+      } catch {
+        // Fall through to original parse error
+      }
+      throw parseErr;
+    }
   } catch (err) {
     return {
       success: false,

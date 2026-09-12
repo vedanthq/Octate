@@ -7,9 +7,10 @@
     "node": ">=22.0.0"
   },
   "bin": {
-    "octate": "./dist/cli.js"
+    "octate": "./bin/octate"
   },
   "files": [
+    "bin",
     "dist",
     "README.md",
     "LICENSE"

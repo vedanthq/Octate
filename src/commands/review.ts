@@ -130,8 +130,8 @@ export function getScopeOptions(
     return { type: 'commit', repoRoot, commit: options.commit };
   }
   if (options.range) {
-    const { base, head } = parseRange(options.range);
-    return { type: 'range', repoRoot, base, head };
+    const { base, head, isThreeDot } = parseRange(options.range);
+    return { type: 'range', repoRoot, base, head, isThreeDot };
   }
   if (options.branch) {
     return { type: 'branch', repoRoot, branch: options.branch };
@@ -141,8 +141,8 @@ export function getScopeOptions(
   if (refs.length > 0 && refs[0]) {
     const ref = refs[0];
     if (ref.includes('..')) {
-      const { base, head } = parseRange(ref);
-      return { type: 'range', repoRoot, base, head };
+      const { base, head, isThreeDot } = parseRange(ref);
+      return { type: 'range', repoRoot, base, head, isThreeDot };
     }
     return { type: 'commit', repoRoot, commit: ref };
   }

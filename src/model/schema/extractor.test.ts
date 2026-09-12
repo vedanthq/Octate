@@ -52,6 +52,15 @@ describe('safeJsonParse', () => {
     }
   });
 
+  it('parses single-quoted JSON successfully via fallback', () => {
+    const raw = "{'findings': [{'severity': 'medium'}]}";
+    const result = safeJsonParse<{ findings: Array<{ severity: string }> }>(raw);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ findings: [{ severity: 'medium' }] });
+    }
+  });
+
   it('returns failure on invalid JSON', () => {
     const raw = '```json\n{ not valid json : 123 }\n```';
     const result = safeJsonParse(raw);

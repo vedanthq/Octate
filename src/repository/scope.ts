@@ -27,6 +27,7 @@ export interface ScopeOptions {
   base?: string; // For --range (base)
   head?: string; // For --range (head) or branch comparison
   branch?: string; // For branch comparison
+  isThreeDot?: boolean; // For three-dot merge base ranges
 }
 
 /**
@@ -105,15 +106,17 @@ export async function resolveScope(options: ScopeOptions): Promise<ReviewScope> 
 
     case 'range': {
       scopeType = 'range';
-      baseRef = base!;
-      headRef = head!;
+      const resolvedBase = base ?? 'HEAD~1';
+      const resolvedHead = head ?? 'HEAD';
+      baseRef = resolvedBase;
+      headRef = resolvedHead;
 
       // Handle three-dot notation (merge base)
-      if (base?.includes('...')) {
-        const [baseRefPart, headRefPart] = base?.split('...');
-        if (baseRefPart && headRefPart) {
-          baseRef = await findMergeBase(repoRoot, baseRefPart, headRefPart);
-        }
+      if (options.isThreeDot || resolvedBase.includes('...')) {
+        const parts = resolvedBase.split('...');
+        const baseRefPart = parts[0] || resolvedBase;
+        const headRefPart = parts[1] || resolvedHead;
+        baseRef = await findMergeBase(repoRoot, baseRefPart, headRefPart);
       }
 
       diff = await getDiff(repoRoot, baseRef, headRef);
@@ -122,9 +125,12 @@ export async function resolveScope(options: ScopeOptions): Promise<ReviewScope> 
     }
 
     case 'branch': {
+      if (!branch) {
+        throw createValidationError('Branch name is required for branch scope');
+      }
       scopeType = 'branch';
-      headRef = branch!;
-      baseRef = await findMergeBase(repoRoot, 'HEAD', branch!);
+      headRef = branch;
+      baseRef = await findMergeBase(repoRoot, 'HEAD', branch);
       diff = await getDiff(repoRoot, baseRef, headRef);
       files = await getChangedFiles(repoRoot, baseRef, headRef);
       break;
@@ -230,17 +236,24 @@ async function getWorkingFiles(repoRoot: string): Promise<FileChange[]> {
  */
 async function findMergeBase(repoRoot: string, ref1: string, ref2: string): Promise<string> {
   try {
-    // For now, use a simple approach - resolve both and find common ancestor
-    // In a full implementation, we'd use git merge-base
+    const gitDir = await findGitDir(repoRoot);
     const oid1 = await resolveRef(repoRoot, ref1);
     const oid2 = await resolveRef(repoRoot, ref2);
 
-    // If they're the same, return it
     if (oid1 === oid2) return oid1;
 
-    // For now, return the first ref as base
-    // A proper implementation would use git merge-base
-    logger.warn({ ref1, ref2 }, 'Using first ref as merge base (simplified)');
+    const mergeBases = await git.findMergeBase({
+      fs,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oids: [oid1, oid2],
+    });
+
+    if (mergeBases && mergeBases.length > 0 && mergeBases[0]) {
+      return mergeBases[0];
+    }
+
+    logger.warn({ ref1, ref2 }, 'No common merge base found, falling back to base ref');
     return oid1;
   } catch (error) {
     throw createGitError('Failed to find merge base', {

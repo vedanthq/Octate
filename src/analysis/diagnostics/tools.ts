@@ -31,7 +31,7 @@ const TOOL_DEFINITIONS: ToolConfig[] = [
   {
     name: 'biome',
     command: 'npx',
-    args: ['biome', 'check', '--formatter=json'],
+    args: ['biome', 'check', '--reporter=json'],
     configFile: 'biome.json',
     languages: ['typescript', 'javascript'],
     enabled: false,

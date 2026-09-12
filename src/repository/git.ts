@@ -24,15 +24,71 @@ const fsAdapter = fs;
  * @throws GitError if ref cannot be resolved
  */
 export async function resolveRef(repoRoot: string, ref: string): Promise<string> {
+  if (!ref || typeof ref !== 'string' || ref.trim() === '') {
+    throw createGitError('Git reference cannot be empty', { repoRoot, ref });
+  }
+
+  const trimmedRef = ref.trim();
+  const gitDir = await findGitDir(repoRoot);
+
+  // Parse relative revision modifiers: e.g. HEAD~1, HEAD~, HEAD^2, HEAD^^, <sha>~3
+  const relIndex = trimmedRef.search(/[~^]/);
+  let baseRef = trimmedRef;
+  let modifiersStr = '';
+
+  if (relIndex !== -1) {
+    baseRef = trimmedRef.slice(0, relIndex);
+    modifiersStr = trimmedRef.slice(relIndex);
+
+    if (!baseRef) {
+      throw createGitError(
+        `Invalid revision "${trimmedRef}": missing base revision before modifier`,
+        { repoRoot, ref: trimmedRef }
+      );
+    }
+
+    if (!/^([~^]\d*)+$/.test(modifiersStr)) {
+      throw createGitError(`Invalid revision syntax "${trimmedRef}"`, {
+        repoRoot,
+        ref: trimmedRef,
+      });
+    }
+  }
+
+  // Resolve baseRef to a commit OID
+  let oid: string | undefined;
+
+  // 1. Try resolving as a symbolic ref (HEAD, branch name, tag, etc.)
   try {
-    const gitDir = await findGitDir(repoRoot);
-    const oid = await git.resolveRef({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, ref });
-    logger.debug({ ref, oid }, 'Resolved ref');
-    return oid;
-  } catch (_error) {
+    oid = await git.resolveRef({ fs: fsAdapter, dir: repoRoot, gitdir: gitDir, ref: baseRef });
+  } catch {
+    // 2. Try resolving as commit OID (abbreviated or full 40-char SHA)
+    if (/^[0-9a-fA-F]{4,40}$/.test(baseRef)) {
+      try {
+        oid = await git.expandOid({
+          fs: fsAdapter,
+          dir: repoRoot,
+          gitdir: gitDir,
+          oid: baseRef.toLowerCase(),
+        });
+      } catch {
+        // Not a known object OID
+      }
+    }
+  }
+
+  if (!oid) {
+    // Check if repository is empty
     const validRefs = await listRefs(repoRoot).catch(() => []);
-    throw createGitError(`Failed to resolve ref "${ref}"`, {
-      ref,
+    if (validRefs.length === 0) {
+      throw createGitError(`Repository has no commits; cannot resolve ref "${trimmedRef}"`, {
+        repoRoot,
+        ref: trimmedRef,
+      });
+    }
+
+    throw createGitError(`Failed to resolve ref "${trimmedRef}"`, {
+      ref: trimmedRef,
       validRefs: validRefs.slice(0, 10),
       suggestion:
         validRefs.length > 0
@@ -40,6 +96,80 @@ export async function resolveRef(repoRoot: string, ref: string): Promise<string>
           : undefined,
     });
   }
+
+  // Ensure peeled to commit if baseRef was an annotated tag
+  try {
+    const commitObj = await git.readCommit({
+      fs: fsAdapter,
+      dir: repoRoot,
+      gitdir: gitDir,
+      oid,
+    });
+    oid = commitObj.oid;
+  } catch (error) {
+    throw createGitError(`Object "${oid}" for ref "${baseRef}" is not a valid commit`, {
+      repoRoot,
+      ref: trimmedRef,
+      oid,
+      error: String(error),
+    });
+  }
+
+  // If there are revision modifiers (~ and/or ^), step through ancestors
+  if (modifiersStr) {
+    const modifierRegex = /([~^])(\d*)/g;
+    let match = modifierRegex.exec(modifiersStr);
+    while (match !== null) {
+      const op = match[1];
+      const numStr = match[2];
+      const count = !numStr ? 1 : parseInt(numStr, 10);
+
+      if (count === 0) {
+        // e.g. HEAD~0 or HEAD^0 refers to the commit itself
+        match = modifierRegex.exec(modifiersStr);
+        continue;
+      }
+
+      if (op === '~') {
+        for (let step = 0; step < count; step++) {
+          const commitObj = await git.readCommit({
+            fs: fsAdapter,
+            dir: repoRoot,
+            gitdir: gitDir,
+            oid,
+          });
+          const parents = commitObj.commit.parent;
+          if (!parents || parents.length === 0) {
+            throw createGitError(
+              `Commit ${oid} has no parent (reached root commit while resolving "${trimmedRef}")`,
+              { repoRoot, ref: trimmedRef, commit: oid, step }
+            );
+          }
+          oid = parents[0]!;
+        }
+      } else if (op === '^') {
+        const commitObj = await git.readCommit({
+          fs: fsAdapter,
+          dir: repoRoot,
+          gitdir: gitDir,
+          oid,
+        });
+        const parents = commitObj.commit.parent;
+        const parentIndex = count - 1;
+        if (!parents || parentIndex < 0 || parentIndex >= parents.length) {
+          throw createGitError(
+            `Commit ${oid} does not have parent ${count} (found ${parents ? parents.length : 0} parents while resolving "${trimmedRef}")`,
+            { repoRoot, ref: trimmedRef, commit: oid, parentIndex: count }
+          );
+        }
+        oid = parents[parentIndex]!;
+      }
+      match = modifierRegex.exec(modifiersStr);
+    }
+  }
+
+  logger.debug({ ref: trimmedRef, oid }, 'Resolved ref');
+  return oid;
 }
 
 /**
@@ -192,32 +322,35 @@ export async function getDiff(repoRoot: string, base: string, head: string): Pro
         // Skip directories
         if (baseType === 'tree' || headType === 'tree') return;
 
-        const baseOid = baseEntry ? await baseEntry.oid() : undefined;
-        const headOid = headEntry ? await headEntry.oid() : undefined;
+        const baseBlobOid = baseEntry ? await baseEntry.oid() : undefined;
+        const headBlobOid = headEntry ? await headEntry.oid() : undefined;
+
+        // Skip unchanged files
+        if (baseBlobOid === headBlobOid) return;
 
         let status: FileChange['status'] = 'modified';
-        if (baseOid === undefined && headOid !== undefined) status = 'added';
-        if (baseOid !== undefined && headOid === undefined) status = 'deleted';
+        if (baseBlobOid === undefined && headBlobOid !== undefined) status = 'added';
+        if (baseBlobOid !== undefined && headBlobOid === undefined) status = 'deleted';
 
         // Read file contents for diff
         let diff = '';
-        if (status !== 'deleted' && headOid) {
+        if (status !== 'deleted' && headBlobOid) {
           try {
             const headBlob = await git.readBlob({
               fs: fsAdapter,
               dir: repoRoot,
               gitdir: gitDir,
-              oid: headOid,
+              oid: headBlobOid,
             });
             const headContent = Buffer.from(headBlob.blob).toString('utf-8');
             if (status === 'added') {
               diff = generateAddedDiff(filepath, headContent);
-            } else if (baseOid) {
+            } else if (baseBlobOid) {
               const baseBlob = await git.readBlob({
                 fs: fsAdapter,
                 dir: repoRoot,
                 gitdir: gitDir,
-                oid: baseOid,
+                oid: baseBlobOid,
               });
               const baseContent = Buffer.from(baseBlob.blob).toString('utf-8');
               diff = generateUnifiedDiff(filepath, baseContent, headContent);
@@ -226,13 +359,13 @@ export async function getDiff(repoRoot: string, base: string, head: string): Pro
             // Binary file or read error
             diff = `# Binary file ${filepath} differs\n`;
           }
-        } else if (status === 'deleted' && baseOid) {
+        } else if (status === 'deleted' && baseBlobOid) {
           try {
             const baseBlob = await git.readBlob({
               fs: fsAdapter,
               dir: repoRoot,
               gitdir: gitDir,
-              oid: baseOid,
+              oid: baseBlobOid,
             });
             const baseContent = Buffer.from(baseBlob.blob).toString('utf-8');
             diff = generateDeletedDiff(filepath, baseContent);
@@ -397,12 +530,15 @@ export async function getChangedFiles(
 
         if (baseType === 'tree' || headType === 'tree') return;
 
-        const baseOid = baseEntry ? await baseEntry.oid() : undefined;
-        const headOid = headEntry ? await headEntry.oid() : undefined;
+        const baseBlobOid = baseEntry ? await baseEntry.oid() : undefined;
+        const headBlobOid = headEntry ? await headEntry.oid() : undefined;
+
+        // Skip unchanged files
+        if (baseBlobOid === headBlobOid) return;
 
         let status: FileChange['status'] = 'modified';
-        if (baseOid === undefined && headOid !== undefined) status = 'added';
-        if (baseOid !== undefined && headOid === undefined) status = 'deleted';
+        if (baseBlobOid === undefined && headBlobOid !== undefined) status = 'added';
+        if (baseBlobOid !== undefined && headBlobOid === undefined) status = 'deleted';
 
         const change: FileChange = {
           path: filepath,
@@ -473,48 +609,61 @@ export async function getStagedDiff(repoRoot: string): Promise<string> {
 
     for (const entry of matrix) {
       const filepath = entry[0];
-      const _headStatus = entry[1];
-      const _workdirStatus = entry[2];
+      const headStatus = entry[1] as 0 | 1;
+      const _workdirStatus = entry[2] as 0 | 1 | 2;
       const stageStatus = entry[3] as 0 | 1 | 2 | 3;
-      // stageStatus: 0 = unmodified, 1 = modified, 2 = added, 3 = deleted
-      if (stageStatus === 1 || stageStatus === 2 || stageStatus === 3) {
-        const status: FileChange['status'] =
-          stageStatus === 2 ? 'added' : stageStatus === 3 ? 'deleted' : 'modified';
 
-        let diff = '';
-        if (status !== 'deleted') {
-          // Read from working tree (which matches index for staged)
-          try {
-            const filePath = path.join(repoRoot, filepath);
-            const content = await fs.readFile(filePath, 'utf-8');
-            if (status === 'added' || !headOid) {
-              diff = generateAddedDiff(filepath, content);
-            } else {
-              // Read from HEAD for comparison
-              const headContent = await readBlobAtCommit(repoRoot, gitDir, headOid, filepath);
-              if (headContent !== null) {
-                diff = generateUnifiedDiff(filepath, headContent, content);
-              } else {
-                diff = generateAddedDiff(filepath, content);
-              }
-            }
-          } catch {
-            diff = `# Binary file ${filepath} differs\n`;
-          }
-        } else {
-          // Deleted file - read from HEAD
-          const headContent = headOid
-            ? await readBlobAtCommit(repoRoot, gitDir, headOid, filepath)
-            : null;
-          if (headContent !== null) {
-            diff = generateDeletedDiff(filepath, headContent);
-          } else {
-            diff = `# Binary file ${filepath} deleted\n`;
-          }
-        }
-
-        diffs.push(diff);
+      // Files where stage matches head must NOT be classified as staged changes
+      if (stageStatus === headStatus) {
+        continue;
       }
+
+      let status: FileChange['status'] | undefined;
+      if (headStatus === 0 && stageStatus === 2) {
+        status = 'added';
+      } else if (headStatus === 1 && (stageStatus === 2 || stageStatus === 3)) {
+        status = 'modified';
+      } else if (headStatus === 1 && stageStatus === 0) {
+        status = 'deleted';
+      }
+
+      if (!status) {
+        continue;
+      }
+
+      let diff = '';
+      if (status !== 'deleted') {
+        // Read from working tree (which matches index for staged)
+        try {
+          const filePath = path.join(repoRoot, filepath);
+          const content = await fs.readFile(filePath, 'utf-8');
+          if (status === 'added' || !headOid) {
+            diff = generateAddedDiff(filepath, content);
+          } else {
+            // Read from HEAD for comparison
+            const headContent = await readBlobAtCommit(repoRoot, gitDir, headOid, filepath);
+            if (headContent !== null) {
+              diff = generateUnifiedDiff(filepath, headContent, content);
+            } else {
+              diff = generateAddedDiff(filepath, content);
+            }
+          }
+        } catch {
+          diff = `# Binary file ${filepath} differs\n`;
+        }
+      } else {
+        // Deleted file - read from HEAD
+        const headContent = headOid
+          ? await readBlobAtCommit(repoRoot, gitDir, headOid, filepath)
+          : null;
+        if (headContent !== null) {
+          diff = generateDeletedDiff(filepath, headContent);
+        } else {
+          diff = `# Binary file ${filepath} deleted\n`;
+        }
+      }
+
+      diffs.push(diff);
     }
 
     return diffs.join('\n');
@@ -549,6 +698,11 @@ export async function getWorkingDiff(repoRoot: string): Promise<string> {
       const _headStatus = entry[1];
       const workdirStatus = entry[2] as 0 | 1 | 2;
       const stageStatus = entry[3] as 0 | 1 | 2 | 3;
+
+      // Clean files or files where workdir matches stage have no working tree changes
+      if (workdirStatus === stageStatus || (workdirStatus === 1 && stageStatus === 1)) {
+        continue;
+      }
 
       if (workdirStatus === 0 && stageStatus !== 0) {
         // Deleted in working tree

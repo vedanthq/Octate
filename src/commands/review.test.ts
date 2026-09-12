@@ -207,6 +207,7 @@ describe('commands:review', () => {
         repoRoot,
         base: 'main',
         head: 'HEAD',
+        isThreeDot: false,
       });
       expect(getScopeOptions({ branch: 'feature-x' }, [], repoRoot)).toEqual({
         type: 'branch',
@@ -222,6 +223,7 @@ describe('commands:review', () => {
         repoRoot,
         base: 'HEAD~1',
         head: 'HEAD',
+        isThreeDot: false,
       });
     });
 
@@ -232,6 +234,7 @@ describe('commands:review', () => {
         repoRoot,
         base: 'main',
         head: 'HEAD',
+        isThreeDot: true,
       });
     });
 
