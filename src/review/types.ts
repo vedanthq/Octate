@@ -83,6 +83,20 @@ export interface ExecutionMetadata {
   criticInvoked: boolean;
   preCriticFindingCount: number;
   postCriticFindingCount: number;
+  timings?: StageTimings | undefined;
+}
+
+/**
+ * Stage-by-stage timing metrics in milliseconds.
+ */
+export interface StageTimings {
+  discoveryMs: number;
+  parseMs: number;
+  symbolsMs: number;
+  diagnosticsMs: number;
+  contextMs: number;
+  modelMs: number;
+  totalMs: number;
 }
 
 /**

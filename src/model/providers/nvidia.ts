@@ -98,16 +98,18 @@ export class LocalNvidiaProvider implements ReviewModel {
     this.endpointUrl =
       options.endpointUrl ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
     this.repoRoot = options.repoRoot ?? process.cwd();
-    const envTimeout = process.env.OCTATE_TIMEOUT_MS
-      ? Number.parseInt(process.env.OCTATE_TIMEOUT_MS, 10)
-      : process.env.NVIDIA_TIMEOUT_MS
-        ? Number.parseInt(process.env.NVIDIA_TIMEOUT_MS, 10)
-        : undefined;
+    const envTimeout = process.env.NVIDIA_TIMEOUT_MS
+      ? Number.parseInt(process.env.NVIDIA_TIMEOUT_MS, 10)
+      : undefined;
+
+    const envConcurrency = process.env.NVIDIA_CONCURRENCY
+      ? Number.parseInt(process.env.NVIDIA_CONCURRENCY, 10)
+      : undefined;
 
     this.resilienceManager = new ResilienceManager({
       maxRetries: options.maxRetries ?? 3,
       timeoutMs: options.timeoutMs ?? envTimeout ?? 120000,
-      concurrency: options.concurrency ?? 2,
+      concurrency: options.concurrency ?? envConcurrency ?? 2,
     });
   }
 

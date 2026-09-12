@@ -66,6 +66,7 @@ export class ReviewUseCase {
       ...scopeOptions,
       repoRoot: scopeOptions.repoRoot || repoRoot,
     });
+    const tDiscovery = Date.now();
     signal?.throwIfAborted();
     emit('git:read', 'complete', `Discovered ${scope.files.length} changed files`, 1, {
       fileCount: scope.files.length,
@@ -153,6 +154,7 @@ export class ReviewUseCase {
         logger.warn({ file: parsedFile.file, error }, 'Symbol extraction failed');
       }
     }
+    const tParse = Date.now();
     emit('index:update', 'complete', `Parsed ${parseResult.files.length} files`, 2, {
       parsedCount: parseResult.files.length,
     });
@@ -169,6 +171,7 @@ export class ReviewUseCase {
       undefined,
       fileContents
     );
+    const tSymbols = Date.now();
     emit('symbols:resolve', 'complete', `Indexed ${allSymbols.length} symbols`, 3, {
       symbolCount: allSymbols.length,
     });
@@ -186,6 +189,7 @@ export class ReviewUseCase {
     } catch (error) {
       logger.warn({ error }, 'Diagnostic collection failed, continuing pipeline');
     }
+    const tDiagnostics = Date.now();
     emit(
       'diagnostics:collect',
       'complete',
@@ -206,6 +210,7 @@ export class ReviewUseCase {
       diagnostics: diagnosticsResult.diagnostics,
       readFile: async (file: string) => fileContents.get(file) ?? '',
     });
+    const tContext = Date.now();
     emit(
       'context:build',
       'complete',
@@ -241,6 +246,19 @@ export class ReviewUseCase {
         head: scope.head,
       },
     });
+    const tEngine = Date.now();
+    const totalMs = tEngine - startTime;
+
+    result.metadata.timings = {
+      discoveryMs: tDiscovery - startTime,
+      parseMs: tParse - tDiscovery,
+      symbolsMs: tSymbols - tParse,
+      diagnosticsMs: tDiagnostics - tSymbols,
+      contextMs: tContext - tDiagnostics,
+      modelMs: tEngine - tContext,
+      totalMs,
+    };
+    result.summary.durationMs = totalMs;
 
     return result;
   }

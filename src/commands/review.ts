@@ -2,6 +2,7 @@
  * Review command - runs code review with various scope and output options.
  */
 
+import { resolve } from 'node:path';
 import { Command } from 'commander';
 import { countBlockingFindings, formatFailureBanner } from '../application/policy.js';
 import { StderrProgressReporter } from '../application/progress.js';
@@ -49,6 +50,7 @@ export function createReviewCommand(): Command {
     .option('-j, --json', 'Output results as JSON')
     .option('--sarif', 'Output results as SARIF v2.1.0')
     .option('-q, --quiet', 'Minimal output (summary only)')
+    .option('--dir <path>', 'Repository or directory to review (defaults to current working directory)')
     .option('--output <file>', 'Write output to file instead of stdout')
     .option('--no-tui', 'Disable interactive TUI (use with --json/--sarif/--quiet)')
     .action(async (refs: string[], options: ReviewOptions) => {
@@ -73,6 +75,7 @@ export interface ReviewOptions {
   sarif?: boolean | undefined;
   quiet?: boolean | undefined;
   output?: string | undefined;
+  dir?: string | undefined;
   tui?: boolean | undefined;
   config?: string | undefined;
   cacheDir?: string | undefined;
@@ -179,7 +182,7 @@ export async function runReview(
     validateOutputMode(options);
 
     // Find Git repository root
-    const cwd = process.cwd();
+    const cwd = options.dir ? resolve(options.dir) : process.cwd();
     const repoRoot = await findGitRoot(cwd);
     if (!repoRoot) {
       throw new GitError('Not a Git repository (or any parent directory)', {
