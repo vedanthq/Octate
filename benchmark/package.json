@@ -1,0 +1,14 @@
+{
+  "name": "octate-defect-benchmark",
+  "version": "1.0.0",
+  "description": "Controlled benchmark suite with known defects and false-positive traps for AI code review evaluation",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.4.0"
+  }
+}

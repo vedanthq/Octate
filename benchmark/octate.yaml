@@ -1,0 +1,6 @@
+name: "defect-benchmark"
+version: "1.0.0"
+review:
+  severity: "low"
+  maxFindings: 50
+  minConfidence: 0.6

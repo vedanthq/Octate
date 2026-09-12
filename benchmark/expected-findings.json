@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "Octate AI Review Benchmark Suite",
+  "version": "1.0.0",
+  "defects": [
+    {
+      "id": "CORR-01",
+      "file": "src/users/userService.ts",
+      "startLine": 45,
+      "endLine": 48,
+      "category": "correctness",
+      "severity": "high",
+      "title": "Unsafe property access on optional preferences object",
+      "whyItIsRealDefect": "The `user.preferences` field is declared as optional (`UserPreferences | undefined`). Accessing `user.preferences.theme.mode` without a null check or optional chaining will throw a runtime `TypeError: Cannot read properties of undefined (reading 'theme')` when preferences is unset.",
+      "fix": "Use optional chaining with a default fallback: `return user.preferences?.theme?.mode ?? 'light';`"
+    },
+    {
+      "id": "CORR-02",
+      "file": "src/users/userService.ts",
+      "startLine": 54,
+      "endLine": 60,
+      "category": "correctness",
+      "severity": "critical",
+      "title": "Inverted conditional logic in dashboard access authorization",
+      "whyItIsRealDefect": "The conditional statement `if (!user.isActive || user.isSuspended) return true;` inverts the intended business policy. It explicitly grants dashboard access to users who are either inactive or suspended, while denying access to active, non-suspended users.",
+      "fix": "Correct the condition to check for active and non-suspended status: `return user.isActive && !user.isSuspended;`"
+    },
+    {
+      "id": "CORR-03",
+      "file": "src/orders/orderService.ts",
+      "startLine": 33,
+      "endLine": 37,
+      "category": "correctness",
+      "severity": "high",
+      "title": "Incorrect return value in discount calculation",
+      "whyItIsRealDefect": "`calculateFinalPrice` computes the discount amount (`subtotal * discountRate`) and directly returns `discountAmount` instead of subtracting it from the subtotal. This causes callers to be billed only for the discount savings rather than the final discounted purchase price.",
+      "fix": "Return the subtotal minus discount amount: `return order.subtotal - discountAmount;`"
+    },
+    {
+      "id": "CORR-04",
+      "file": "src/orders/orderService.ts",
+      "startLine": 43,
+      "endLine": 52,
+      "category": "correctness",
+      "severity": "medium",
+      "title": "Off-by-one boundary error in order pagination loop",
+      "whyItIsRealDefect": "The loop condition `for (let i = 0; i <= limit; i++)` iterates `limit + 1` times instead of `limit` times. When `limit` items are requested, the function returns one excess item beyond the requested page boundary.",
+      "fix": "Change the loop condition to strictly less than: `for (let i = 0; i < limit; i++)`"
+    },
+    {
+      "id": "SEC-01",
+      "file": "src/system/systemTools.ts",
+      "startLine": 8,
+      "endLine": 12,
+      "category": "security",
+      "severity": "critical",
+      "title": "Command injection via unescaped shell interpolation in execSync",
+      "whyItIsRealDefect": "`createBackupArchive` directly interpolates `outputArchiveName` into a bash command string executed by `execSync`. An attacker supplying a payload such as `\"test; cat /etc/passwd #\"` can execute arbitrary operating system commands with the privileges of the running Node.js process.",
+      "fix": "Avoid shell execution. Use `child_process.execFile` or `spawn` with an array of arguments, or strictly sanitize inputs against a restrictive alphanumeric regex allowlist."
+    },
+    {
+      "id": "SEC-02",
+      "file": "src/storage/fileManager.ts",
+      "startLine": 15,
+      "endLine": 19,
+      "category": "security",
+      "severity": "critical",
+      "title": "Path traversal vulnerability in document file read",
+      "whyItIsRealDefect": "`readUploadedDocument` joins `this.uploadDir` with user-controlled input `userFilename` using `path.join` and reads it immediately without verifying that the resolved path stays within the base directory. Inputs like `../../../../etc/passwd` escape the upload directory and read arbitrary system files.",
+      "fix": "Resolve the full path and verify that `path.resolve(targetPath).startsWith(this.uploadDir + path.sep)` or use `path.basename(userFilename)`."
+    },
+    {
+      "id": "SEC-03",
+      "file": "src/users/userService.ts",
+      "startLine": 66,
+      "endLine": 76,
+      "category": "security",
+      "severity": "high",
+      "title": "Insecure Direct Object Reference (IDOR) in email update",
+      "whyItIsRealDefect": "`updateUserEmail` accepts `actor: AuthContext` but never validates whether `actor.userId === targetUserId` or if the actor possesses the `admin` role before updating `targetUserId`'s email address. Any authenticated user can modify any other user's account.",
+      "fix": "Enforce authorization: `if (actor.userId !== targetUserId && !actor.roles.includes('admin')) throw new ForbiddenError('Unauthorized');`"
+    },
+    {
+      "id": "SEC-04",
+      "file": "src/config/authConfig.ts",
+      "startLine": 6,
+      "endLine": 9,
+      "category": "security",
+      "severity": "critical",
+      "title": "Hard-coded production API secrets and JWT private keys in version control",
+      "whyItIsRealDefect": "Production credentials (`STRIPE_LIVE_SECRET_KEY` starting with `sk_live_` and `JWT_AUTH_SECRET`) are committed directly to plaintext source code. Committing live secrets compromises payment processors and enables forged JWT authentication tokens.",
+      "fix": "Revoke and rotate the exposed secrets immediately. Load secrets dynamically from environment variables: `process.env.STRIPE_SECRET_KEY` and `process.env.JWT_SECRET`."
+    },
+    {
+      "id": "REL-01",
+      "file": "src/storage/fileManager.ts",
+      "startLine": 25,
+      "endLine": 32,
+      "category": "reliability",
+      "severity": "medium",
+      "title": "Swallowed exception during temporary file cleanup",
+      "whyItIsRealDefect": "The `cleanupTemporaryFile` method catches errors from `fs.unlinkSync` and discards them with an empty block. Uncaught disk permission errors, locked file descriptors, or corrupted filesystem issues are concealed, making system failures impossible to detect or debug.",
+      "fix": "Log the error with context or check for `ENOENT` specifically, re-throwing unexpected filesystem errors: `if (err.code !== 'ENOENT') logger.warn({ err, filePath }, 'Failed to unlink temp file');`"
+    },
+    {
+      "id": "REL-02",
+      "file": "src/orders/orderService.ts",
+      "startLine": 58,
+      "endLine": 61,
+      "category": "reliability",
+      "severity": "high",
+      "title": "Missing error handling on asynchronous notification promise",
+      "whyItIsRealDefect": "`dispatchOrderNotification` calls asynchronous `this.notifier.sendReceipt(order.id, email)` without `await`, `.then()`, or `.catch()`. If the remote notification service fails or throws a network error, it causes an unhandled promise rejection that can crash the Node.js runtime.",
+      "fix": "Attach a `.catch` rejection handler or make the method async and await the call inside a `try/catch` block."
+    },
+    {
+      "id": "REL-03",
+      "file": "src/storage/fileManager.ts",
+      "startLine": 38,
+      "endLine": 45,
+      "category": "reliability",
+      "severity": "high",
+      "title": "File descriptor resource leak due to missing finally block",
+      "whyItIsRealDefect": "`inspectFileHeader` opens a synchronous file descriptor via `fs.openSync` and closes it via `fs.closeSync(fd)` after `readSync`. If `fs.readSync` throws an error or buffer allocation fails, `closeSync` is bypassed and the OS file descriptor is leaked permanently.",
+      "fix": "Ensure the descriptor is closed inside a `finally` block: `const fd = fs.openSync(filePath, 'r'); try { ... } finally { fs.closeSync(fd); }`"
+    },
+    {
+      "id": "REL-04",
+      "file": "src/orders/orderService.ts",
+      "startLine": 67,
+      "endLine": 79,
+      "category": "reliability",
+      "severity": "high",
+      "title": "Concurrency race condition (TOCTOU) in inventory reservation",
+      "whyItIsRealDefect": "`reserveStock` performs a stock availability check (`currentStock >= quantity`), yields the execution loop during an asynchronous delay (`await ...`), and then writes the updated stock. Concurrent requests for the same product can interleave between check and deduction, overselling stock into negative numbers.",
+      "fix": "Use atomic operations or a mutex/lock to serialize inventory read and update operations."
+    },
+    {
+      "id": "PERF-01",
+      "file": "src/reports/reportGenerator.ts",
+      "startLine": 15,
+      "endLine": 30,
+      "category": "performance",
+      "severity": "medium",
+      "title": "Accidental O(n^2) nested loop array scan in findCommonTags",
+      "whyItIsRealDefect": "`findCommonTags` scans through nested arrays using `userB.tags.includes(tagA)` and `!common.includes(tagA)`. For datasets with `N` users and `M` tags, this results in quadratic $O(N^2 \\times M^2)$ complexity, causing severe CPU spikes and event-loop lag.",
+      "fix": "Index tags into a `Set<string>` before comparison to reduce lookup complexity from $O(N)$ to $O(1)$, achieving linear $O(N + M)$ overall runtime."
+    },
+    {
+      "id": "PERF-02",
+      "file": "src/reports/reportGenerator.ts",
+      "startLine": 36,
+      "endLine": 46,
+      "category": "performance",
+      "severity": "medium",
+      "title": "Repeated expensive RegExp compilation and HMAC computation inside loop",
+      "whyItIsRealDefect": "`validateLogRecords` re-instantiates `new RegExp(...)` and re-computes `crypto.createHmac(...)` with a static payload on every single log entry inside `.map()`. When processing large log batches (e.g. 100,000 lines), this generates excessive memory allocations, GC pressure, and millions of wasted CPU cycles.",
+      "fix": "Hoist regex creation and static cryptographic digest computation outside the loop so they execute once."
+    },
+    {
+      "id": "PERF-03",
+      "file": "src/reports/reportGenerator.ts",
+      "startLine": 52,
+      "endLine": 62,
+      "category": "performance",
+      "severity": "high",
+      "title": "Repeated synchronous disk read inside high-volume loop",
+      "whyItIsRealDefect": "`generateUserStatements` calls `fs.readFileSync(templatePath, 'utf-8')` on every iteration of the user loop. Reading the exact same static file repeatedly from the filesystem for every user introduces massive redundant I/O bottlenecks and blocks the event loop.",
+      "fix": "Read the template file once into memory before entering the loop: `const template = fs.readFileSync(templatePath, 'utf-8');`"
+    }
+  ],
+  "falsePositiveTraps": [
+    {
+      "id": "FP-TRAP-01",
+      "file": "src/utils/safeHelpers.ts",
+      "startLine": 15,
+      "endLine": 25,
+      "apparentCategory": "security",
+      "whyNotDefect": "Appears to perform path traversal because it takes an external `userPath` and joins it with `baseDir`. However, lines 20-22 strictly resolve the absolute path and verify `target.startsWith(root + path.sep)`, throwing an error if traversal is attempted. The file access is completely secure."
+    },
+    {
+      "id": "FP-TRAP-02",
+      "file": "src/utils/safeHelpers.ts",
+      "startLine": 30,
+      "endLine": 37,
+      "apparentCategory": "security",
+      "whyNotDefect": "Appears to perform SQL injection by interpolating `userSortColumn` directly into an SQL string (`ORDER BY ${sanitizedColumn}`). However, line 34 strictly validates `userSortColumn` against a compile-time Set allowlist of valid columns, falling back to `'created_at'` if invalid. No untrusted input reaches the query string."
+    },
+    {
+      "id": "FP-TRAP-03",
+      "file": "src/utils/safeHelpers.ts",
+      "startLine": 42,
+      "endLine": 53,
+      "apparentCategory": "reliability",
+      "whyNotDefect": "Appears to swallow exceptions in a `try/catch` block. However, line 48 specifically checks `error.code === 'ENOENT'` to return `false` (standard Node.js idiom for testing file non-existence), and line 51 explicitly re-throws any other unexpected errors (e.g. `EACCES`, `EIO`)."
+    },
+    {
+      "id": "FP-TRAP-04",
+      "file": "src/utils/safeHelpers.ts",
+      "startLine": 8,
+      "endLine": 8,
+      "apparentCategory": "security",
+      "whyNotDefect": "Appears to be a hardcoded credential due to high-entropy token formatting. However, it is explicitly a public sandbox token (`pk_test_*`) intended for client-side test distribution with zero confidential permissions or live access."
+    },
+    {
+      "id": "FP-TRAP-05",
+      "file": "src/utils/safeHelpers.ts",
+      "startLine": 59,
+      "endLine": 74,
+      "apparentCategory": "performance",
+      "whyNotDefect": "Appears to have nested loops with `includes` resulting in $O(N^2)$ complexity. However, the outer loop iterates over `DAYS_OF_WEEK`, which is an immutable constant array of exactly 7 items. The complexity is $O(7 \\times N) = O(N)$ linear time, perfectly bounded and optimal."
+    }
+  ]
+}
