@@ -18,6 +18,7 @@
 import { ModelError } from '../errors/index.js';
 import type { ReviewContext } from '../intelligence/types.js';
 import { createLogger } from '../logging/index.js';
+import { FINDINGS_OUTPUT_SCHEMA } from '../model/index.js';
 import { type GroundingContext, groundFinding } from '../model/schema/grounding.js';
 import type {
   Diagnostic,
@@ -243,7 +244,7 @@ export async function executeCriticStage(params: CriticParams): Promise<CriticRe
     diff: params.diff,
     context: params.reviewContext.items ?? [],
     diagnostics: params.diagnostics,
-    outputSchema: 'findings',
+    outputSchema: FINDINGS_OUTPUT_SCHEMA,
   };
 
   const usage: ModelUsage = {

@@ -105,7 +105,12 @@ export class ResilienceManager {
 
   constructor(options?: ResilienceOptions) {
     this.maxRetries = options?.maxRetries ?? 3;
-    this.timeoutMs = options?.timeoutMs ?? 60000;
+    const envTimeout = process.env.OCTATE_TIMEOUT_MS
+      ? Number.parseInt(process.env.OCTATE_TIMEOUT_MS, 10)
+      : process.env.NVIDIA_TIMEOUT_MS
+        ? Number.parseInt(process.env.NVIDIA_TIMEOUT_MS, 10)
+        : undefined;
+    this.timeoutMs = options?.timeoutMs ?? envTimeout ?? 120000;
     this.concurrency = options?.concurrency ?? 2;
     this.pool = createPromisePool(this.concurrency);
   }

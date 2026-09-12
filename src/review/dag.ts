@@ -14,6 +14,7 @@ import { ModelError } from '../errors/index.js';
 import type { SymbolIndex } from '../intelligence/index/symbol-index.js';
 import type { ReviewContext } from '../intelligence/types.js';
 import { createLogger } from '../logging/index.js';
+import { FINDINGS_OUTPUT_SCHEMA } from '../model/index.js';
 import type {
   Diagnostic,
   ModelFinding,
@@ -127,7 +128,7 @@ function buildModelRequest(role: ReviewerRole, params: DAGParams): ModelRequest 
     diff: params.diff,
     context: params.reviewContext.items ?? [],
     diagnostics: roleDiagnostics,
-    outputSchema: 'findings',
+    outputSchema: FINDINGS_OUTPUT_SCHEMA,
   };
 }
 

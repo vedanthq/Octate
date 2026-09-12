@@ -5,6 +5,13 @@
  */
 
 import { Command } from 'commander';
+
+// Automatically load .env file if present in current working directory
+try {
+  process.loadEnvFile();
+} catch {
+  // Ignore if .env is missing or invalid
+}
 import type { CancellationController } from './cancellation/index.js';
 import { registerCommands } from './commands/index.js';
 import { isOctateError } from './errors/index.js';

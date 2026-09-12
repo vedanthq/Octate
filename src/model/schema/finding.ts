@@ -89,8 +89,46 @@ export type FindingsPayload = z.infer<typeof FindingsPayloadSchema>;
 const compiledFindingsValidator = z.compile(FindingsPayloadSchema);
 
 /**
+ * Canonical JSON schema description passed to LLMs in prompt templates.
+ */
+export const FINDINGS_OUTPUT_SCHEMA = JSON.stringify(
+  {
+    findings: [
+      {
+        severity: 'critical | high | medium | low | info',
+        category:
+          'correctness | security | performance | architecture | reliability | maintainability | compatibility | testing',
+        title: 'Concise summary of issue',
+        message: 'Detailed explanation of the issue and why it matters',
+        file: 'path/to/file.ext',
+        startLine: 1,
+        endLine: 1,
+        confidence: 0.95,
+        evidence: [
+          {
+            file: 'path/to/file.ext',
+            startLine: 1,
+            endLine: 1,
+            relationship: 'defines | calls | imports | modifies',
+            explanation: 'Why this code is evidence of the issue',
+          },
+        ],
+        relatedFiles: ['path/to/file.ext'],
+        relatedSymbols: ['functionOrClassName'],
+        impact: 'Real-world runtime or security impact',
+        suggestedFix: 'Concrete remediation instructions or replacement code (must be actionable)',
+        reviewer: 'structural | semantic | security',
+      },
+    ],
+  },
+  null,
+  2
+);
+
+/**
  * Validates raw model output or parsed JSON against FindingsPayloadSchema.
- * Automatically wraps array root responses into `{ findings: [...] }`.
+ * Automatically wraps array root responses into `{ findings: [...] }`
+ * and single finding objects into `{ findings: [finding] }`.
  *
  * @param data - Raw parsed data
  * @returns Result object containing validated findings payload or ZodError
@@ -101,6 +139,14 @@ export function validateModelResponse(
   let target = data;
   if (Array.isArray(target)) {
     target = { findings: target };
+  } else if (
+    target &&
+    typeof target === 'object' &&
+    !('findings' in target) &&
+    'file' in target &&
+    'message' in target
+  ) {
+    target = { findings: [target] };
   }
 
   const result = compiledFindingsValidator.safeParse(target);

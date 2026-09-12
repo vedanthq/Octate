@@ -97,9 +97,15 @@ export class LocalNvidiaProvider implements ReviewModel {
     this.endpointUrl =
       options.endpointUrl ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
     this.repoRoot = options.repoRoot ?? process.cwd();
+    const envTimeout = process.env.OCTATE_TIMEOUT_MS
+      ? Number.parseInt(process.env.OCTATE_TIMEOUT_MS, 10)
+      : process.env.NVIDIA_TIMEOUT_MS
+        ? Number.parseInt(process.env.NVIDIA_TIMEOUT_MS, 10)
+        : undefined;
+
     this.resilienceManager = new ResilienceManager({
       maxRetries: options.maxRetries ?? 3,
-      timeoutMs: options.timeoutMs ?? 60000,
+      timeoutMs: options.timeoutMs ?? envTimeout ?? 120000,
       concurrency: options.concurrency ?? 2,
     });
   }
@@ -171,8 +177,10 @@ export class LocalNvidiaProvider implements ReviewModel {
 
             if (!response.ok) {
               const errorBody = await response.text().catch(() => '');
+              const safeBody =
+                errorBody.length > 200 ? `${errorBody.slice(0, 200)}...` : errorBody;
               const err: ErrorWithHttpMetadata = new Error(
-                `NVIDIA API request failed with status ${response.status}: ${errorBody}`
+                `NVIDIA API request failed with status ${response.status}: ${safeBody}`
               );
               err.status = response.status;
               err.headers = response.headers;

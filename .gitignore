@@ -6,3 +6,6 @@ dist/
 coverage/
 .octate/
 ~/.local/share/octate/
+*.env
+.env
+.opencode/

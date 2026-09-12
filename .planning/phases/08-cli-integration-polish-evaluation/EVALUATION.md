@@ -14,8 +14,8 @@ This evaluation quantitatively validates the review pipeline against a multi-lan
 | :--- | :--- | :--- | :--- |
 | **Precision** | > 70.0% | **100.0%** | ✅ PASSED |
 | **False-Positive Rate** | < 30.0% | **0.0%** | ✅ PASSED |
-| **Review Latency (p50)** | < 30,000 ms | **2034 ms** | ✅ PASSED |
-| **Review Latency (p95)** | < 30,000 ms | **2054 ms** | ✅ PASSED |
+| **Review Latency (p50)** | < 30,000 ms | **1582 ms** | ✅ PASSED |
+| **Review Latency (p95)** | < 30,000 ms | **1592 ms** | ✅ PASSED |
 | **Token Budget Headroom** | < 8,000 tokens | **540 tokens (6.8%)** | ✅ PASSED |
 | **Cache Acceleration** | > 3.0x speedup | **5.6x speedup** | ✅ PASSED |
 
@@ -45,10 +45,10 @@ This evaluation quantitatively validates the review pipeline against a multi-lan
 
 | Fixture | Language | Category | Expected Defect | Detected | Clean False Positives | Latency |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `security/command-injection` | Python | security | 1 finding(s) | ✅ Yes | 0 (Clean) | 203ms |
-| `security/sql-injection` | TypeScript | security | 1 finding(s) | ✅ Yes | 0 (Clean) | 2054ms |
-| `structural/resource-leak` | TypeScript | structural | 1 finding(s) | ✅ Yes | 0 (Clean) | 2034ms |
-| `semantic/logic-regression` | TypeScript | semantic | 1 finding(s) | ✅ Yes | 0 (Clean) | 1750ms |
+| `security/command-injection` | Python | security | 1 finding(s) | ✅ Yes | 0 (Clean) | 215ms |
+| `security/sql-injection` | TypeScript | security | 1 finding(s) | ✅ Yes | 0 (Clean) | 1592ms |
+| `structural/resource-leak` | TypeScript | structural | 1 finding(s) | ✅ Yes | 0 (Clean) | 1582ms |
+| `semantic/logic-regression` | TypeScript | semantic | 1 finding(s) | ✅ Yes | 0 (Clean) | 1505ms |
 
 ---
 
@@ -69,8 +69,8 @@ The benchmark confirms that Octate's two-stage Critic architecture eliminates ha
 
 ## Performance, Token Budget & Cache Speedup
 
-- **Cold Review Latency (p50):** 2034 ms
-- **Warm Cache Review Latency:** 366 ms (5.6x speedup)
+- **Cold Review Latency (p50):** 1582 ms
+- **Warm Cache Review Latency:** 285 ms (5.6x speedup)
 - **Token Efficiency:** The full Reviewer DAG and Critic pipeline completes in ~540 tokens per single-file change, well under the 8,000-token per-request budget ceiling.
 
 ---
