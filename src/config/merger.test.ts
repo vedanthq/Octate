@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadConfig, mergeConfigs, parseEnvConfig } from './merger.js';
 import { DefaultConfig, type OctateConfig } from './schema.js';
+import { ConfigurationError } from '../errors/index.js';
 
 describe('config/merger', () => {
   let testDir: string;
@@ -182,12 +183,22 @@ describe('config/merger', () => {
       expect(merged.ignore).toEqual(['*.tmp', 'build/']);
     });
 
-    it('validates final merged config', () => {
+    it('validates final merged config and throws ConfigurationError', () => {
       const invalid = {
         ...DefaultConfig,
         project: { name: '' }, // invalid: empty name
       };
-      expect(() => mergeConfigs(DefaultConfig, DefaultConfig, invalid, {}, {})).toThrow();
+      expect(() => mergeConfigs(DefaultConfig, DefaultConfig, invalid, {}, {})).toThrow(
+        ConfigurationError
+      );
+      try {
+        mergeConfigs(DefaultConfig, DefaultConfig, invalid, {}, {});
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(ConfigurationError);
+        const configErr = err as ConfigurationError;
+        expect(configErr.exitCode).toBe(2);
+        expect(configErr.message).toContain('Invalid configuration');
+      }
     });
   });
 

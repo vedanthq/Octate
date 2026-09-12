@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { ConfigurationError } from '../errors/index.js';
 import { createLogger } from '../logging/index.js';
 import { loadGlobalConfig, loadProjectConfig } from './loader.js';
 import { DefaultConfig, type OctateConfig, OctateConfigSchema } from './schema.js';
@@ -108,9 +110,22 @@ export function mergeConfigs(
   const merged = deepMerge({ ...defaults }, global, project, env, cli);
 
   // Validate final merged config
-  const validated = OctateConfigSchema.parse(merged);
-  logger.info({ projectName: validated.project.name }, 'Config merged and validated');
-  return validated;
+  try {
+    const validated = OctateConfigSchema.parse(merged);
+    logger.info({ projectName: validated.project.name }, 'Config merged and validated');
+    return validated;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issues = error.issues
+        .map((i) => `${i.path.join('.') || 'root'}: ${i.message}`)
+        .join('; ');
+      logger.error({ issues }, 'Merged config validation failed');
+      throw new ConfigurationError(`Invalid configuration: ${issues}`, {
+        issues: error.issues,
+      });
+    }
+    throw error;
+  }
 }
 
 /**
