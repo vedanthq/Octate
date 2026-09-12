@@ -1,6 +1,9 @@
-name: "defect-benchmark"
 version: "1.0.0"
+project:
+  name: "defect-benchmark"
 review:
   severity: "low"
-  maxFindings: 50
-  minConfidence: 0.6
+  max_findings: 50
+rules: []
+architecture: {}
+ignore: []
