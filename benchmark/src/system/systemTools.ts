@@ -1,13 +1,19 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 export class SystemTools {
   /**
-   * SEC-01: Command injection vulnerability
-   * Executes system shell commands using unescaped string interpolation of external input.
+   * SEC-01 (RESOLVED): Command injection vulnerability
+   * Uses argument array via execFileSync and strict regex validation to eliminate shell execution risks.
    */
   createBackupArchive(targetDirectory: string, outputArchiveName: string): string {
-    // Bug SEC-01: outputArchiveName can inject malicious shell commands (e.g. "archive; cat /etc/passwd")
-    const command = `tar -czf /tmp/${outputArchiveName}.tar.gz -C ${targetDirectory} .`;
-    return execSync(command, { encoding: 'utf-8' });
+    if (!/^[a-zA-Z0-9_-]+$/.test(outputArchiveName)) {
+      throw new Error(
+        'Invalid archive name: must contain only alphanumeric characters, underscores, or dashes'
+      );
+    }
+    const outputFile = `/tmp/${outputArchiveName}.tar.gz`;
+    return execFileSync('tar', ['-czf', outputFile, '-C', targetDirectory, '.'], {
+      encoding: 'utf-8',
+    });
   }
 }

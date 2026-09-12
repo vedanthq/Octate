@@ -9,55 +9,50 @@ export interface ReportUser {
 
 export class ReportGenerator {
   /**
-   * PERF-01: Accidental O(n^2) complexity
-   * Nested array search using `includes` inside `filter` on every item instead of using a Set.
+   * PERF-01 (RESOLVED): Accidental O(n^2) complexity
+   * Pre-indexes lookup tags into a Set for linear O(N + M) complexity.
    */
   findCommonTags(groupA: ReportUser[], groupB: ReportUser[]): string[] {
-    const common: string[] = [];
+    const groupBTags = new Set<string>();
+    for (const userB of groupB) {
+      for (const tag of userB.tags) {
+        groupBTags.add(tag);
+      }
+    }
 
-    // Bug PERF-01: Quadratic complexity due to nested linear scan across unindexed arrays
+    const common = new Set<string>();
     for (const userA of groupA) {
-      for (const tagA of userA.tags) {
-        for (const userB of groupB) {
-          if (userB.tags.includes(tagA) && !common.includes(tagA)) {
-            common.push(tagA);
-          }
+      for (const tag of userA.tags) {
+        if (groupBTags.has(tag)) {
+          common.add(tag);
         }
       }
     }
 
-    return common;
+    return Array.from(common);
   }
 
   /**
-   * PERF-02: Repeated expensive computation
-   * Re-compiles RegExp and re-computes static cryptographic HMAC inside high-frequency loop.
+   * PERF-02 (RESOLVED): Repeated expensive computation
+   * Hoists static RegExp and cryptographic HMAC prefix computation outside the map loop.
    */
   validateLogRecords(rawEntries: string[], secretSalt: string): boolean[] {
-    return rawEntries.map((entry) => {
-      // Bug PERF-02: Expensive RegExp compilation repeated on every entry instead of hoisting
-      const logPattern = new RegExp('^\\[(INFO|WARN|ERROR)\\]\\s+\\d{4}-\\d{2}-\\d{2}:\\s+(.*)$');
+    const logPattern = /^\[(INFO|WARN|ERROR)\]\s+\d{4}-\d{2}-\d{2}:\s+(.*)$/;
+    const expectedHmacPrefix = crypto
+      .createHmac('sha256', secretSalt)
+      .update('STATIC_LOG_HEADER')
+      .digest('hex')
+      .slice(0, 4);
 
-      // Bug PERF-02: Redundant repeated HMAC computation of identical static secret on every item
-      const hmac = crypto.createHmac('sha256', secretSalt).update('STATIC_LOG_HEADER').digest('hex');
-
-      return logPattern.test(entry) && entry.includes(hmac.slice(0, 4));
-    });
+    return rawEntries.map((entry) => logPattern.test(entry) && entry.includes(expectedHmacPrefix));
   }
 
   /**
-   * PERF-03: Unnecessary filesystem work in loop
-   * Repeatedly reads identical static template file from disk inside loop for every record.
+   * PERF-03 (RESOLVED): Unnecessary filesystem work in loop
+   * Hoists static template file read outside the loop to eliminate redundant disk I/O.
    */
   generateUserStatements(users: ReportUser[], templatePath: string): string[] {
-    const statements: string[] = [];
-
-    for (const user of users) {
-      // Bug PERF-03: Disk I/O performed synchronously on every single loop iteration
-      const template = fs.readFileSync(templatePath, 'utf-8');
-      statements.push(template.replace('{{USER}}', user.name));
-    }
-
-    return statements;
+    const template = fs.readFileSync(templatePath, 'utf-8');
+    return users.map((user) => template.replace('{{USER}}', user.name));
   }
 }

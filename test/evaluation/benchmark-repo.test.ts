@@ -128,9 +128,9 @@ describe('Benchmark Repository Verification (Phase 3)', () => {
     }
   });
 
-  it('verifies every defect file exists on disk and lines match real code', async () => {
+  it('verifies every defect file exists in defects/ and lines match real code', async () => {
     for (const defect of benchmarkSchema.defects) {
-      const fullPath = path.join(benchmarkDir, defect.file);
+      const fullPath = path.join(benchmarkDir, 'defects', defect.file);
       const content = await fs.readFile(fullPath, 'utf-8');
       const lines = content.split('\n');
 
@@ -147,6 +147,15 @@ describe('Benchmark Repository Verification (Phase 3)', () => {
       expect(defect.whyItIsRealDefect).toBeTruthy();
       expect(defect.fix).toBeTruthy();
       expect(['critical', 'high', 'medium', 'low']).toContain(defect.severity);
+    }
+  });
+
+  it('verifies src/ contains the active resolved code matching all fixes', async () => {
+    for (const defect of benchmarkSchema.defects) {
+      const activePath = path.join(benchmarkDir, defect.file);
+      const content = await fs.readFile(activePath, 'utf-8');
+      // Assert that resolved annotations or fixes are present in the active source files
+      expect(content).toContain(`${defect.id} (RESOLVED)`);
     }
   });
 

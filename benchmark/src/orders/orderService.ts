@@ -27,23 +27,21 @@ export class OrderService {
   }
 
   /**
-   * CORR-03: Incorrect return value
-   * Returns discount amount instead of the discounted total price.
+   * CORR-03 (RESOLVED): Incorrect return value
+   * Returns the final net price after applying discount.
    */
   calculateFinalPrice(order: Order, discountRate: number): number {
     const discountAmount = order.subtotal * discountRate;
-    // Bug CORR-03: Should return `order.subtotal - discountAmount`, but returns discount amount only
-    return discountAmount;
+    return Math.max(0, order.subtotal - discountAmount);
   }
 
   /**
-   * CORR-04: Off-by-one error
-   * Loop condition `i <= limit` attempts to fetch limit + 1 items, causing off-by-one out-of-bounds access.
+   * CORR-04 (RESOLVED): Off-by-one error
+   * Strictly iterates `limit` times (`i < limit`) to preserve pagination bounds.
    */
   getRecentTopOrders(limit: number): Order[] {
     const results: Order[] = [];
-    // Bug CORR-04: Loop condition `i <= limit` results in limit + 1 iterations
-    for (let i = 0; i <= limit; i++) {
+    for (let i = 0; i < limit; i++) {
       if (i < this.orders.length) {
         results.push(this.orders[i]);
       }
@@ -51,30 +49,47 @@ export class OrderService {
     return results;
   }
 
+  private pendingReservations: Map<string, Promise<void>> = new Map();
+
   /**
-   * REL-02: Missing error handling
-   * Fire-and-forget asynchronous call with no await and no .catch handler.
+   * REL-02 (RESOLVED): Missing error handling
+   * Properly catches and logs asynchronous notification failures to prevent unhandled rejections.
    */
   dispatchOrderNotification(order: Order, email: string): void {
-    // Bug REL-02: Unhandled promise rejection if sendReceipt fails asynchronously
-    this.notifier.sendReceipt(order.id, email);
+    this.notifier.sendReceipt(order.id, email).catch((error) => {
+      process.stderr.write(
+        `[WARN] Failed to send order receipt for ${order.id}: ${String(error)}\n`
+      );
+    });
   }
 
   /**
-   * REL-04: Race-prone logic (TOCTOU)
-   * Asynchronous gap between stock check and stock deduction allows race condition / double-allocation.
+   * REL-04 (RESOLVED): Race-prone logic (TOCTOU)
+   * Serializes inventory reservation operations per-product to eliminate TOCTOU race conditions.
    */
   async reserveStock(productId: string, quantity: number): Promise<boolean> {
-    const currentStock = this.inventory.get(productId) ?? 0;
+    const previous = this.pendingReservations.get(productId) ?? Promise.resolve();
 
-    // Bug REL-04: Time-of-check to time-of-use race condition
-    if (currentStock >= quantity) {
-      // Simulating async network verification or delay
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      this.inventory.set(productId, currentStock - quantity);
-      return true;
+    let release!: () => void;
+    const currentLock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.pendingReservations.set(productId, currentLock);
+
+    await previous;
+    try {
+      const currentStock = this.inventory.get(productId) ?? 0;
+      if (currentStock >= quantity) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        this.inventory.set(productId, currentStock - quantity);
+        return true;
+      }
+      return false;
+    } finally {
+      release();
+      if (this.pendingReservations.get(productId) === currentLock) {
+        this.pendingReservations.delete(productId);
+      }
     }
-
-    return false;
   }
 }

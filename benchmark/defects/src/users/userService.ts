@@ -39,35 +39,37 @@ export class UserService {
   }
 
   /**
-   * CORR-01 (RESOLVED): Null/undefined failure
-   * Safely accesses optional preferences with optional chaining and fallback.
+   * CORR-01: Null/undefined failure
+   * Accesses deep property on optional preferences without null/undefined check or optional chaining.
    */
   getUserThemeMode(user: UserProfile): string {
-    return user.preferences?.theme?.mode ?? 'light';
+    // Bug CORR-01: user.preferences is optional; calling .theme.mode throws when undefined
+    return user.preferences.theme.mode;
   }
 
   /**
-   * CORR-02 (RESOLVED): Incorrect conditional logic
-   * Corrected authorization logic: requires active account and non-suspended status.
+   * CORR-02: Incorrect conditional logic
+   * Inverted conditional logic: grants access to inactive or suspended users.
    */
   canAccessDashboard(user: UserProfile): boolean {
-    return user.isActive && !user.isSuspended;
+    // Bug CORR-02: Should be `user.isActive && !user.isSuspended`
+    if (!user.isActive || user.isSuspended) {
+      return true;
+    }
+    return false;
   }
 
   /**
-   * SEC-03 (RESOLVED): Unsafe authorization logic (IDOR)
-   * Enforces actor authorization check ensuring only the account owner or admins can modify email.
+   * SEC-03: Unsafe authorization logic (IDOR)
+   * Any authenticated caller can change any user's email because actor permissions are ignored.
    */
   async updateUserEmail(actor: AuthContext, targetUserId: string, newEmail: string): Promise<boolean> {
-    if (actor.userId !== targetUserId && !actor.roles.includes('admin')) {
-      throw new Error('Forbidden: insufficient permissions to update user profile');
-    }
-
     const user = this.userStore.get(targetUserId);
     if (!user) {
       throw new Error(`User ${targetUserId} not found`);
     }
 
+    // Bug SEC-03: Missing authorization check verifying actor.userId === targetUserId || actor.roles.includes('admin')
     user.email = newEmail;
     this.userStore.set(targetUserId, user);
     return true;

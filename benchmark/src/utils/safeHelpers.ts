@@ -31,7 +31,9 @@ export class SafeHelpers {
     const ALLOWED_SORT_COLUMNS = new Set(['created_at', 'price', 'customer_id', 'status']);
 
     // Strict validation against immutable set
-    const sanitizedColumn = ALLOWED_SORT_COLUMNS.has(userSortColumn) ? userSortColumn : 'created_at';
+    const sanitizedColumn = ALLOWED_SORT_COLUMNS.has(userSortColumn)
+      ? userSortColumn
+      : 'created_at';
 
     return `SELECT * FROM orders ORDER BY ${sanitizedColumn} DESC`;
   }
@@ -43,9 +45,10 @@ export class SafeHelpers {
     try {
       fs.statSync(targetPath);
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as NodeJS.ErrnoException;
       // Intentionally handle only ENOENT; re-throw any unexpected permission or I/O failure
-      if (error && error.code === 'ENOENT') {
+      if (err && err.code === 'ENOENT') {
         return false;
       }
       throw error;
@@ -56,7 +59,9 @@ export class SafeHelpers {
    * FP-TRAP-05: Looks like accidental O(n^2), but inner loop operates on a constant fixed-size set.
    * Complexity is O(7 * n) = O(n), not quadratic.
    */
-  auditWeeklyScheduleCoverage(employeeShifts: Array<{ id: string; activeDays: number[] }>): Map<number, number> {
+  auditWeeklyScheduleCoverage(
+    employeeShifts: Array<{ id: string; activeDays: number[] }>
+  ): Map<number, number> {
     const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // Strictly bounded constant of 7 elements
     const coverage = new Map<number, number>();
 

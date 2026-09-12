@@ -9,38 +9,47 @@ export class FileManager {
   }
 
   /**
-   * SEC-02: Path traversal vulnerability
-   * Directly joins user-controlled filename with upload directory without containment validation.
+   * SEC-02 (RESOLVED): Path traversal vulnerability
+   * Enforces directory containment check and basename normalization to prevent escaping uploadDir.
    */
   readUploadedDocument(userFilename: string): Buffer {
-    // Bug SEC-02: User input can contain "../../../etc/passwd" to escape upload directory
-    const targetPath = path.join(this.uploadDir, userFilename);
+    const safeName = path.basename(userFilename);
+    const targetPath = path.resolve(this.uploadDir, safeName);
+    if (!targetPath.startsWith(this.uploadDir + path.sep) && targetPath !== this.uploadDir) {
+      throw new Error('Access denied: path traversal detected');
+    }
     return fs.readFileSync(targetPath);
   }
 
   /**
-   * REL-01: Swallowed exception
-   * Catches errors during file deletion and completely swallows them without logging or handling.
+   * REL-01 (RESOLVED): Swallowed exception
+   * Inspects error code and alerts on unexpected filesystem or permission errors.
    */
   cleanupTemporaryFile(filePath: string): void {
     try {
-      // Bug REL-01: File deletion failure is swallowed silently
       fs.unlinkSync(filePath);
-    } catch (_err) {
-      // Completely swallowed exception - hides critical I/O, lock, or permission errors
+    } catch (err: unknown) {
+      const errorObj = err as NodeJS.ErrnoException;
+      if (errorObj?.code !== 'ENOENT') {
+        process.stderr.write(
+          `[WARN] Failed to delete temporary file ${filePath}: ${errorObj?.message}\n`
+        );
+      }
     }
   }
 
   /**
-   * REL-03: Resource leak (unclosed file descriptor)
-   * Opens file descriptor but does not ensure closure inside a `finally` block on error.
+   * REL-03 (RESOLVED): Resource leak (unclosed file descriptor)
+   * Guaranteed file descriptor closure using a try-finally block.
    */
   inspectFileHeader(filePath: string): Buffer {
-    // Bug REL-03: File descriptor leaked if readSync throws before closeSync
     const fd = fs.openSync(filePath, 'r');
-    const buffer = Buffer.alloc(128);
-    fs.readSync(fd, buffer, 0, 128, 0);
-    fs.closeSync(fd);
-    return buffer;
+    try {
+      const buffer = Buffer.alloc(128);
+      fs.readSync(fd, buffer, 0, 128, 0);
+      return buffer;
+    } finally {
+      fs.closeSync(fd);
+    }
   }
 }
