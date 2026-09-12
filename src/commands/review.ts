@@ -191,6 +191,7 @@ export async function runReview(
 
     // Load configuration
     const config = await loadConfig({
+      configPath: options.config,
       cliConfig: {
         review: {
           severity: options.quiet ? 'info' : 'medium',

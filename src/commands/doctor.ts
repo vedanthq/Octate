@@ -98,9 +98,10 @@ export function checkNodeRuntime(version: string = process.version): DoctorCheck
 /**
  * Checks configuration validity.
  */
-export async function checkConfiguration(_options: DoctorOptions = {}): Promise<DoctorCheck> {
+export async function checkConfiguration(options: DoctorOptions = {}): Promise<DoctorCheck> {
   try {
     const config = await loadConfig({
+      configPath: options.config,
       cliConfig: {},
     });
 

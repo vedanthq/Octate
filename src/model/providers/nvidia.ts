@@ -93,7 +93,8 @@ export class LocalNvidiaProvider implements ReviewModel {
 
   constructor(options: LocalNvidiaProviderOptions = {}) {
     this.options = options;
-    this.modelId = options.modelId ?? 'nvidia/nemotron-3-ultra-550b-a55b';
+    const envModel = process.env.OCTATE_MODEL ?? process.env.NVIDIA_MODEL;
+    this.modelId = options.modelId ?? envModel ?? 'nvidia/nemotron-3-ultra-550b-a55b';
     this.endpointUrl =
       options.endpointUrl ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
     this.repoRoot = options.repoRoot ?? process.cwd();

@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { ConfigurationError } from '../errors/index.js';
 import { createLogger } from '../logging/index.js';
 import { DefaultConfig, type OctateConfig, OctateConfigSchema } from './schema.js';
 
@@ -58,10 +59,13 @@ export async function loadProjectConfig(configPath?: string): Promise<OctateConf
     if (error instanceof z.ZodError) {
       const issues = error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
       logger.error({ filePath, issues }, 'Project config validation failed');
-      throw new Error(`Invalid octate.yaml: ${issues}`);
+      throw new ConfigurationError(`Invalid octate.yaml: ${issues}`, { filePath, issues });
     }
     logger.error({ filePath, error: String(error) }, 'Failed to load project config');
-    throw error;
+    throw new ConfigurationError(
+      `Failed to load config from ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+      { filePath }
+    );
   }
 }
 

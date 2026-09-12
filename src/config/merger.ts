@@ -118,6 +118,7 @@ export function mergeConfigs(
  * Loads defaults, global, project, parses env, and merges with CLI overrides.
  */
 export interface ConfigMergerOptions {
+  configPath?: string | undefined;
   projectConfig?: OctateConfig;
   globalConfig?: OctateConfig;
   envConfig?: DeepPartial<OctateConfig>;
@@ -126,7 +127,8 @@ export interface ConfigMergerOptions {
 
 export async function loadConfig(options: ConfigMergerOptions = {}): Promise<OctateConfig> {
   const {
-    projectConfig = await loadProjectConfig(),
+    configPath,
+    projectConfig = await loadProjectConfig(configPath),
     globalConfig = await loadGlobalConfig(),
     envConfig = parseEnvConfig(),
     cliConfig = {},
