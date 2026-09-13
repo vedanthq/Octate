@@ -4,11 +4,12 @@
   "expectedSeverity": "high",
   "targetFile": "src/io/reader.ts",
   "lineRange": {
-    "start": 8,
-    "end": 15
+    "start": 10,
+    "end": 17
   },
   "minConfidence": 0.8,
   "titleContains": "resource",
   "negativeVariantFile": "clean.ts",
-  "expectedNegativeFindings": 0
+  "expectedNegativeFindings": 0,
+  "hasDefect": true
 }

@@ -11,10 +11,3 @@ export async function getUserCount(db: DatabaseClient): Promise<number> {
   const result = await db.query("SELECT COUNT(*) as cnt FROM users");
   return Number(result.rows[0]?.cnt ?? 0);
 }
-
-export async function getUserById(db: DatabaseClient, userId: string): Promise<UserRecord | null> {
-  // Vulnerable to SQL injection via unescaped string interpolation
-  const query = `SELECT * FROM users WHERE id = '${userId}'`;
-  const result = await db.query(query);
-  return (result.rows[0] as UserRecord) ?? null;
-}

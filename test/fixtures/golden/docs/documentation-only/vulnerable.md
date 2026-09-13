@@ -1,6 +1,7 @@
-# Octate Review Guide
+# Documentation Guide
 
-This guide explains how to run reviews with Octate.
+Initial overview of documentation.
 
-## Basic Usage
-Run `octate review` in any git repository to produce high-value findings.
+## Getting Started
+
+Instructions for setting up the environment.

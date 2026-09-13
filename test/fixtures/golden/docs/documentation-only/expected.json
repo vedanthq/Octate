@@ -4,8 +4,8 @@
   "expectedSeverity": "info",
   "targetFile": "docs/guide.md",
   "lineRange": {
-    "start": 1,
-    "end": 20
+    "start": 5,
+    "end": 8
   },
   "minConfidence": 0.8,
   "negativeVariantFile": "clean.md",

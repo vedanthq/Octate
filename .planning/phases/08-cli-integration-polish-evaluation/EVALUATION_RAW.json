@@ -1,0 +1,1123 @@
+{
+  "date": "2026-09-13",
+  "mode": "harness_mock",
+  "modeLabel": "HARNESS INTEGRITY ONLY — NOT AI QUALITY EVIDENCE",
+  "provider": "mock",
+  "model": "mock-nemotron",
+  "endpoint": "mock://local",
+  "totalRequests": 34,
+  "summary": {
+    "truePositives": 4,
+    "falsePositives": 0,
+    "falseNegatives": 0,
+    "precision": 1,
+    "recall": 1,
+    "falsePositiveRate": 0,
+    "latencyMs": 12180,
+    "p50LatencyMs": 1699,
+    "p95LatencyMs": 2563,
+    "totalTokens": 4020,
+    "totalPromptTokens": 2680,
+    "totalCompletionTokens": 1340,
+    "apiFailures": 0,
+    "timeoutCount": 0,
+    "passed": true
+  },
+  "fixtures": [
+    {
+      "fixtureName": "security/command-injection",
+      "category": "security",
+      "language": "python",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 1,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [
+        {
+          "severity": "critical",
+          "category": "security",
+          "title": "SECURITY defect: command",
+          "message": "Identified critical issue in scripts/reporter.py around line 13",
+          "file": "scripts/reporter.py",
+          "startLine": 13,
+          "endLine": 16,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "scripts/reporter.py",
+              "startLine": 13,
+              "endLine": 16,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "937662bd1ace9121",
+          "compositeScore": 69.25,
+          "scoreBreakdown": {
+            "severityScore": 100,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 100,
+            "regressionProbabilityScore": 30
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 13
+        }
+      ],
+      "cleanFindings": [],
+      "matchedFindings": [
+        {
+          "severity": "critical",
+          "category": "security",
+          "title": "SECURITY defect: command",
+          "message": "Identified critical issue in scripts/reporter.py around line 13",
+          "file": "scripts/reporter.py",
+          "startLine": 13,
+          "endLine": 16,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "scripts/reporter.py",
+              "startLine": 13,
+              "endLine": 16,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "937662bd1ace9121",
+          "compositeScore": 69.25,
+          "scoreBreakdown": {
+            "severityScore": 100,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 100,
+            "regressionProbabilityScore": 30
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 13
+        }
+      ],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 1,
+      "actualFindings": 1,
+      "expectedFindings": 1,
+      "negativeFindings": 0,
+      "latencyMs": 273,
+      "vulnerableLatencyMs": 117,
+      "cleanLatencyMs": 74,
+      "promptTokens": 630,
+      "completionTokens": 315,
+      "totalTokens": 945,
+      "requestCount": 7,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {
+        "structural": 1
+      },
+      "reviewerSpecificFindings": {
+        "critic": [
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: command",
+            "message": "Identified critical issue in scripts/reporter.py around line 13",
+            "file": "scripts/reporter.py",
+            "startLine": 13,
+            "endLine": 16,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "scripts/reporter.py",
+                "startLine": 13,
+                "endLine": 16,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          },
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: command",
+            "message": "Identified critical issue in scripts/reporter.py around line 13",
+            "file": "scripts/reporter.py",
+            "startLine": 13,
+            "endLine": 16,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "scripts/reporter.py",
+                "startLine": 13,
+                "endLine": 16,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ],
+        "security": [
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: command",
+            "message": "Identified critical issue in scripts/reporter.py around line 13",
+            "file": "scripts/reporter.py",
+            "startLine": 13,
+            "endLine": 16,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "scripts/reporter.py",
+                "startLine": 13,
+                "endLine": 16,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-security-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ],
+        "structural": [
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: command",
+            "message": "Identified critical issue in scripts/reporter.py around line 13",
+            "file": "scripts/reporter.py",
+            "startLine": 13,
+            "endLine": 16,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "scripts/reporter.py",
+                "startLine": 13,
+                "endLine": 16,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-structural-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ]
+      },
+      "criticRetainedCount": 1,
+      "vulnerableDiffLines": 12,
+      "cleanDiffLines": 14,
+      "passed": true
+    },
+    {
+      "fixtureName": "security/sql-clean-type-assertion",
+      "category": "security",
+      "language": "typescript",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 0,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [],
+      "cleanFindings": [],
+      "matchedFindings": [],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 0,
+      "actualFindings": 0,
+      "expectedFindings": 0,
+      "negativeFindings": 0,
+      "latencyMs": 2292,
+      "vulnerableLatencyMs": 1380,
+      "cleanLatencyMs": 878,
+      "promptTokens": 300,
+      "completionTokens": 150,
+      "totalTokens": 450,
+      "requestCount": 6,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {},
+      "reviewerSpecificFindings": {
+        "critic": [],
+        "security": []
+      },
+      "criticRetainedCount": 0,
+      "vulnerableDiffLines": 8,
+      "cleanDiffLines": 8,
+      "passed": true
+    },
+    {
+      "fixtureName": "security/sql-injection",
+      "category": "security",
+      "language": "typescript",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 1,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [
+        {
+          "severity": "critical",
+          "category": "security",
+          "title": "SECURITY defect: SQL",
+          "message": "Identified critical issue in src/db/users.ts around line 16",
+          "file": "src/db/users.ts",
+          "startLine": 16,
+          "endLine": 22,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "src/db/users.ts",
+              "startLine": 16,
+              "endLine": 22,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "54ad7d6272afde90",
+          "compositeScore": 69.25,
+          "scoreBreakdown": {
+            "severityScore": 100,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 100,
+            "regressionProbabilityScore": 30
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 16
+        }
+      ],
+      "cleanFindings": [],
+      "matchedFindings": [
+        {
+          "severity": "critical",
+          "category": "security",
+          "title": "SECURITY defect: SQL",
+          "message": "Identified critical issue in src/db/users.ts around line 16",
+          "file": "src/db/users.ts",
+          "startLine": 16,
+          "endLine": 22,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "src/db/users.ts",
+              "startLine": 16,
+              "endLine": 22,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "54ad7d6272afde90",
+          "compositeScore": 69.25,
+          "scoreBreakdown": {
+            "severityScore": 100,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 100,
+            "regressionProbabilityScore": 30
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 16
+        }
+      ],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 1,
+      "actualFindings": 1,
+      "expectedFindings": 1,
+      "negativeFindings": 0,
+      "latencyMs": 1683,
+      "vulnerableLatencyMs": 865,
+      "cleanLatencyMs": 789,
+      "promptTokens": 630,
+      "completionTokens": 315,
+      "totalTokens": 945,
+      "requestCount": 7,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {
+        "structural": 1
+      },
+      "reviewerSpecificFindings": {
+        "critic": [
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: SQL",
+            "message": "Identified critical issue in src/db/users.ts around line 16",
+            "file": "src/db/users.ts",
+            "startLine": 16,
+            "endLine": 22,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/db/users.ts",
+                "startLine": 16,
+                "endLine": 22,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          },
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: SQL",
+            "message": "Identified critical issue in src/db/users.ts around line 16",
+            "file": "src/db/users.ts",
+            "startLine": 16,
+            "endLine": 22,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/db/users.ts",
+                "startLine": 16,
+                "endLine": 22,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ],
+        "security": [
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: SQL",
+            "message": "Identified critical issue in src/db/users.ts around line 16",
+            "file": "src/db/users.ts",
+            "startLine": 16,
+            "endLine": 22,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/db/users.ts",
+                "startLine": 16,
+                "endLine": 22,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-security-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ],
+        "structural": [
+          {
+            "severity": "critical",
+            "category": "security",
+            "title": "SECURITY defect: SQL",
+            "message": "Identified critical issue in src/db/users.ts around line 16",
+            "file": "src/db/users.ts",
+            "startLine": 16,
+            "endLine": 22,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/db/users.ts",
+                "startLine": 16,
+                "endLine": 22,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-structural-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ]
+      },
+      "criticRetainedCount": 1,
+      "vulnerableDiffLines": 8,
+      "cleanDiffLines": 8,
+      "passed": true
+    },
+    {
+      "fixtureName": "structural/resource-leak",
+      "category": "structural",
+      "language": "typescript",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 1,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [
+        {
+          "severity": "high",
+          "category": "reliability",
+          "title": "RELIABILITY defect: resource",
+          "message": "Identified high issue in src/io/reader.ts around line 10",
+          "file": "src/io/reader.ts",
+          "startLine": 10,
+          "endLine": 17,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "src/io/reader.ts",
+              "startLine": 10,
+              "endLine": 17,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "94b7987d37e153e2",
+          "compositeScore": 56.75,
+          "scoreBreakdown": {
+            "severityScore": 75,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 0,
+            "regressionProbabilityScore": 80
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 10
+        }
+      ],
+      "cleanFindings": [],
+      "matchedFindings": [
+        {
+          "severity": "high",
+          "category": "reliability",
+          "title": "RELIABILITY defect: resource",
+          "message": "Identified high issue in src/io/reader.ts around line 10",
+          "file": "src/io/reader.ts",
+          "startLine": 10,
+          "endLine": 17,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "src/io/reader.ts",
+              "startLine": 10,
+              "endLine": 17,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "94b7987d37e153e2",
+          "compositeScore": 56.75,
+          "scoreBreakdown": {
+            "severityScore": 75,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 0,
+            "regressionProbabilityScore": 80
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 10
+        }
+      ],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 1,
+      "actualFindings": 1,
+      "expectedFindings": 1,
+      "negativeFindings": 0,
+      "latencyMs": 1603,
+      "vulnerableLatencyMs": 812,
+      "cleanLatencyMs": 752,
+      "promptTokens": 460,
+      "completionTokens": 230,
+      "totalTokens": 690,
+      "requestCount": 5,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {
+        "structural": 1
+      },
+      "reviewerSpecificFindings": {
+        "critic": [
+          {
+            "severity": "high",
+            "category": "reliability",
+            "title": "RELIABILITY defect: resource",
+            "message": "Identified high issue in src/io/reader.ts around line 10",
+            "file": "src/io/reader.ts",
+            "startLine": 10,
+            "endLine": 17,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/io/reader.ts",
+                "startLine": 10,
+                "endLine": 17,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          },
+          {
+            "severity": "high",
+            "category": "reliability",
+            "title": "RELIABILITY defect: resource",
+            "message": "Identified high issue in src/io/reader.ts around line 10",
+            "file": "src/io/reader.ts",
+            "startLine": 10,
+            "endLine": 17,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/io/reader.ts",
+                "startLine": 10,
+                "endLine": 17,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ],
+        "structural": [
+          {
+            "severity": "high",
+            "category": "reliability",
+            "title": "RELIABILITY defect: resource",
+            "message": "Identified high issue in src/io/reader.ts around line 10",
+            "file": "src/io/reader.ts",
+            "startLine": 10,
+            "endLine": 17,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/io/reader.ts",
+                "startLine": 10,
+                "endLine": 17,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-structural-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ]
+      },
+      "criticRetainedCount": 1,
+      "vulnerableDiffLines": 9,
+      "cleanDiffLines": 15,
+      "passed": true
+    },
+    {
+      "fixtureName": "semantic/logic-regression",
+      "category": "semantic",
+      "language": "typescript",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 1,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [
+        {
+          "severity": "high",
+          "category": "correctness",
+          "title": "CORRECTNESS defect: logic",
+          "message": "Identified high issue in src/billing/pricing.ts around line 22",
+          "file": "src/billing/pricing.ts",
+          "startLine": 22,
+          "endLine": 26,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "src/billing/pricing.ts",
+              "startLine": 22,
+              "endLine": 26,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "eb3fb79c4dba98f6",
+          "compositeScore": 57.25,
+          "scoreBreakdown": {
+            "severityScore": 75,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 0,
+            "regressionProbabilityScore": 85
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 22
+        }
+      ],
+      "cleanFindings": [],
+      "matchedFindings": [
+        {
+          "severity": "high",
+          "category": "correctness",
+          "title": "CORRECTNESS defect: logic",
+          "message": "Identified high issue in src/billing/pricing.ts around line 22",
+          "file": "src/billing/pricing.ts",
+          "startLine": 22,
+          "endLine": 26,
+          "confidence": 0.9,
+          "evidence": [
+            {
+              "file": "src/billing/pricing.ts",
+              "startLine": 22,
+              "endLine": 26,
+              "relationship": "caller",
+              "explanation": "Ground truth defect location"
+            }
+          ],
+          "relatedFiles": [],
+          "relatedSymbols": [],
+          "impact": "May trigger unhandled TypeError at runtime",
+          "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+          "reviewer": "structural",
+          "contributingReviewers": [
+            "structural"
+          ],
+          "metadata": {
+            "contributingReviewers": [
+              "structural"
+            ]
+          },
+          "id": "eb3fb79c4dba98f6",
+          "compositeScore": 57.25,
+          "scoreBreakdown": {
+            "severityScore": 75,
+            "confidenceScore": 90,
+            "evidenceStrengthScore": 45,
+            "blastRadiusScore": 10,
+            "securityImpactScore": 0,
+            "regressionProbabilityScore": 85
+          },
+          "blastRadius": 10,
+          "evidenceStrength": 45,
+          "line": 22
+        }
+      ],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 1,
+      "actualFindings": 1,
+      "expectedFindings": 1,
+      "negativeFindings": 0,
+      "latencyMs": 1699,
+      "vulnerableLatencyMs": 789,
+      "cleanLatencyMs": 879,
+      "promptTokens": 460,
+      "completionTokens": 230,
+      "totalTokens": 690,
+      "requestCount": 5,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {
+        "structural": 1
+      },
+      "reviewerSpecificFindings": {
+        "critic": [
+          {
+            "severity": "high",
+            "category": "correctness",
+            "title": "CORRECTNESS defect: logic",
+            "message": "Identified high issue in src/billing/pricing.ts around line 22",
+            "file": "src/billing/pricing.ts",
+            "startLine": 22,
+            "endLine": 26,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/billing/pricing.ts",
+                "startLine": 22,
+                "endLine": 26,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          },
+          {
+            "severity": "high",
+            "category": "correctness",
+            "title": "CORRECTNESS defect: logic",
+            "message": "Identified high issue in src/billing/pricing.ts around line 22",
+            "file": "src/billing/pricing.ts",
+            "startLine": 22,
+            "endLine": 26,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/billing/pricing.ts",
+                "startLine": 22,
+                "endLine": 26,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-critic-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ],
+        "structural": [
+          {
+            "severity": "high",
+            "category": "correctness",
+            "title": "CORRECTNESS defect: logic",
+            "message": "Identified high issue in src/billing/pricing.ts around line 22",
+            "file": "src/billing/pricing.ts",
+            "startLine": 22,
+            "endLine": 26,
+            "confidence": 0.9,
+            "evidence": [
+              {
+                "file": "src/billing/pricing.ts",
+                "startLine": 22,
+                "endLine": 26,
+                "relationship": "caller",
+                "explanation": "Ground truth defect location"
+              }
+            ],
+            "relatedFiles": [],
+            "relatedSymbols": [],
+            "impact": "May trigger unhandled TypeError at runtime",
+            "suggestedFix": "if (!user) { return null; } before accessing user.profile",
+            "reviewer": "structural",
+            "id": "finding-structural-0",
+            "finalRank": 1,
+            "status": "open"
+          }
+        ]
+      },
+      "criticRetainedCount": 1,
+      "vulnerableDiffLines": 13,
+      "cleanDiffLines": 13,
+      "passed": true
+    },
+    {
+      "fixtureName": "refactor/unrelated-refactor",
+      "category": "refactor",
+      "language": "typescript",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 0,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [],
+      "cleanFindings": [],
+      "matchedFindings": [],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 0,
+      "actualFindings": 0,
+      "expectedFindings": 0,
+      "negativeFindings": 0,
+      "latencyMs": 2563,
+      "vulnerableLatencyMs": 1043,
+      "cleanLatencyMs": 1477,
+      "promptTokens": 200,
+      "completionTokens": 100,
+      "totalTokens": 300,
+      "requestCount": 4,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {},
+      "reviewerSpecificFindings": {
+        "critic": []
+      },
+      "criticRetainedCount": 0,
+      "vulnerableDiffLines": 7,
+      "cleanDiffLines": 7,
+      "passed": true
+    },
+    {
+      "fixtureName": "docs/documentation-only",
+      "category": "docs",
+      "language": "markdown",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 0,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [],
+      "cleanFindings": [],
+      "matchedFindings": [],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 0,
+      "actualFindings": 0,
+      "expectedFindings": 0,
+      "negativeFindings": 0,
+      "latencyMs": 47,
+      "vulnerableLatencyMs": 6,
+      "cleanLatencyMs": 11,
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0,
+      "requestCount": 0,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {},
+      "reviewerSpecificFindings": {},
+      "criticRetainedCount": 0,
+      "vulnerableDiffLines": 5,
+      "cleanDiffLines": 5,
+      "passed": true
+    },
+    {
+      "fixtureName": "test/test-only",
+      "category": "test",
+      "language": "typescript",
+      "mode": "harness_mock",
+      "provider": "mock",
+      "model": "mock-nemotron",
+      "endpoint": "mock://local",
+      "detectedExpected": true,
+      "truePositives": 0,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "falsePositiveRate": 0,
+      "vulnerableFindings": [],
+      "cleanFindings": [],
+      "matchedFindings": [],
+      "unmatchedFindings": [],
+      "rawFindingsCount": 0,
+      "actualFindings": 0,
+      "expectedFindings": 0,
+      "negativeFindings": 0,
+      "latencyMs": 2007,
+      "vulnerableLatencyMs": 1063,
+      "cleanLatencyMs": 912,
+      "promptTokens": 0,
+      "completionTokens": 0,
+      "totalTokens": 0,
+      "requestCount": 0,
+      "apiFailures": 0,
+      "timeoutCount": 0,
+      "byReviewer": {},
+      "reviewerSpecificFindings": {},
+      "criticRetainedCount": 0,
+      "vulnerableDiffLines": 6,
+      "cleanDiffLines": 6,
+      "passed": true
+    }
+  ]
+}

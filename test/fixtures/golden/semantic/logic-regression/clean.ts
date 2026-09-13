@@ -9,6 +9,10 @@ export interface PricingOptions {
   discountCouponAmount: number;
 }
 
+export function getStandardTaxRate(): number {
+  return 0.08;
+}
+
 export function calculateOrderTotal(items: PricingItem[], options: PricingOptions): number {
   let subtotal = 0;
   for (const item of items) {

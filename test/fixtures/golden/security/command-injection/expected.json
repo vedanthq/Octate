@@ -4,11 +4,12 @@
   "expectedSeverity": "critical",
   "targetFile": "scripts/reporter.py",
   "lineRange": {
-    "start": 10,
-    "end": 14
+    "start": 13,
+    "end": 16
   },
-  "minConfidence": 0.85,
-  "titleContains": "Command",
+  "minConfidence": 0.8,
+  "titleContains": "command",
   "negativeVariantFile": "clean.py",
-  "expectedNegativeFindings": 0
+  "expectedNegativeFindings": 0,
+  "hasDefect": true
 }

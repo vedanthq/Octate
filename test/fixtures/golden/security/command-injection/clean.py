@@ -7,6 +7,9 @@ Audit log viewer utility.
 Exports system log data for administrative diagnostics.
 """
 
+def get_log_directory() -> str:
+    return "/var/log"
+
 def view_audit_log(user_file: str) -> None:
     # Safe subprocess execution without shell interpolation
     safe_path = Path("/var/log") / Path(user_file).name

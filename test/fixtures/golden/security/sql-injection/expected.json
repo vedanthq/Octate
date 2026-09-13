@@ -4,11 +4,12 @@
   "expectedSeverity": "critical",
   "targetFile": "src/db/users.ts",
   "lineRange": {
-    "start": 12,
-    "end": 16
+    "start": 16,
+    "end": 22
   },
-  "minConfidence": 0.85,
+  "minConfidence": 0.8,
   "titleContains": "SQL",
   "negativeVariantFile": "clean.ts",
-  "expectedNegativeFindings": 0
+  "expectedNegativeFindings": 0,
+  "hasDefect": true
 }

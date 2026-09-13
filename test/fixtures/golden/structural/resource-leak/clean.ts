@@ -1,8 +1,12 @@
-import fs from 'node:fs';
+import fs from "node:fs";
 
 /**
- * File streaming utility with explicit lifecycle cleanup.
+ * File streaming utility.
  */
+export function checkFileExists(filePath: string): boolean {
+  return fs.existsSync(filePath);
+}
+
 export async function streamFileData(
   filePath: string,
   onData: (chunk: Buffer) => void

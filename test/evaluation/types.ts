@@ -3,18 +3,19 @@
  * Supports distinct modes for Harness Integrity (Mock) and Live Pipeline Evaluation (Real LLM).
  */
 
-import type { RankedFinding } from '../../src/review/types.js';
+import type { RankedFinding } from "../../src/review/types.js";
 
-export type EvaluationMode = 'harness_mock' | 'live_pipeline';
+export type EvaluationMode = "harness_mock" | "live_pipeline";
 
 export interface ExpectedFinding {
   id: string;
-  category: 'security' | 'correctness' | 'performance' | 'architecture' | 'reliability' | 'testing';
-  expectedSeverity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  category: "security" | "correctness" | "performance" | "architecture" | "reliability" | "testing";
+  expectedSeverity: "critical" | "high" | "medium" | "low" | "info";
   targetFile: string;
   lineRange: { start: number; end: number };
   minConfidence: number;
   titleContains?: string | undefined;
+  defectKeywords?: string[] | undefined;
   negativeVariantFile?: string | undefined;
   expectedNegativeFindings: number;
   hasDefect?: boolean | undefined;
@@ -23,7 +24,9 @@ export interface ExpectedFinding {
 export interface GoldenFixture {
   name: string;
   category: string;
-  language: 'typescript' | 'python' | 'markdown' | 'other';
+  language: "typescript" | "python" | "markdown" | "other";
+  baselineFile?: string | undefined;
+  baselineContent?: string | undefined;
   vulnerableFile: string;
   vulnerableContent: string;
   cleanFile: string;
@@ -36,15 +39,18 @@ export interface GoldenFixture {
 export interface EvaluationResult {
   fixtureName: string;
   category: string;
-  language: 'typescript' | 'python' | 'markdown' | 'other';
+  language: "typescript" | "python" | "markdown" | "other";
   mode: EvaluationMode;
+  provider: string;
   model: string;
+  endpoint?: string | undefined;
   detectedExpected: boolean;
   truePositives: number;
   falsePositives: number;
   falseNegatives: number;
   precision: number;
   recall: number;
+  falsePositiveRate: number;
   vulnerableFindings: RankedFinding[];
   cleanFindings: RankedFinding[];
   matchedFindings: RankedFinding[];
@@ -59,14 +65,24 @@ export interface EvaluationResult {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  requestCount: number;
   apiFailures: number;
+  timeoutCount: number;
+  byReviewer: Record<string, number>;
+  reviewerSpecificFindings: Record<string, RankedFinding[]>;
+  criticRetainedCount: number;
+  vulnerableDiffLines: number;
+  cleanDiffLines: number;
   passed: boolean;
 }
 
 export interface EvaluationScorecard {
   mode: EvaluationMode;
   modeLabel: string;
+  provider: string;
   modelName: string;
+  endpoint: string;
+  totalRequests: number;
   truePositives: number;
   falsePositives: number;
   falseNegatives: number;
@@ -80,7 +96,9 @@ export interface EvaluationScorecard {
   p95LatencyMs: number;
   latencyMs: number;
   apiFailures: number;
+  timeoutCount: number;
   passed: boolean;
-  disclaimer?: string;
+  disclaimer?: string | undefined;
   results: EvaluationResult[];
+  rawResults: EvaluationResult[];
 }
