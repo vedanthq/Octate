@@ -6,8 +6,8 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rmdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import type { Diagnostic } from '../model/types.js';
 import type { DiagnosticCollection } from '../analysis/diagnostics/index.js';
+import type { Diagnostic } from '../model/types.js';
 
 /**
  * Cache entry metadata.

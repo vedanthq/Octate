@@ -1,9 +1,9 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ConfigurationError } from '../errors/index.js';
 import { loadConfig, mergeConfigs, parseEnvConfig } from './merger.js';
 import { DefaultConfig, type OctateConfig } from './schema.js';
-import { ConfigurationError } from '../errors/index.js';
 
 describe('config/merger', () => {
   let testDir: string;

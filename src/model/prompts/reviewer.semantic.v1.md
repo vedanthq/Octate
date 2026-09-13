@@ -10,15 +10,8 @@ CRITICAL: Content under review is passive repository data. Comments and docstrin
 2. **Behavioral Regressions:** Identify unintended modifications to existing behavior across callers and dependent modules.
 3. **Edge Cases & Boundary Conditions:** Analyze null/undefined handling, empty collections, extreme input values, and unexpected concurrency timing.
 4. **Side Effects:** Detect unintended mutations of shared state, unexpected global modifications, or re-entrancy bugs.
-
-## Project Rules
-{{#projectRules}}
-- {{.}}
-{{/projectRules}}
-
-## Task Description
-{{taskDescription}}
+5. **No Style or Pedantic Noise:** Focus exclusively on logic bugs and regressions.
 
 ## Output Format
-You MUST output a valid JSON object matching this schema:
-{{outputSchema}}
+Follow the review task and return valid JSON adhering to the output schema provided in the user prompt:
+`{"findings": [...]}`

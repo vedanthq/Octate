@@ -1,27 +1,32 @@
 /**
  * Golden Review Evaluation Test Suite.
- * Asserts precision > 70% and false-positive rate < 30% across
- * TypeScript and Python defect fixtures.
+ * Asserts harness integrity and verifies that live pipeline mode enforces strict non-mock invariants.
  */
 
 import { describe, expect, it } from '@jest/globals';
+import { MockReviewModel } from '../../src/review/__tests__/mocks.js';
 import { loadGoldenFixtures, matchesExpected, runEvaluationHarness } from './harness.js';
 import type { EvaluationScorecard } from './types.js';
 
 describe('Golden Review Evaluation Testbed', () => {
-  it('loads all 4 golden fixtures across categories and languages', async () => {
+  it('loads all golden fixtures across categories and languages', async () => {
     const fixtures = await loadGoldenFixtures();
-    expect(fixtures.length).toBe(4);
+    expect(fixtures.length).toBe(8);
 
     const names = fixtures.map((f) => f.name);
     expect(names).toContain('security/sql-injection');
     expect(names).toContain('security/command-injection');
+    expect(names).toContain('security/sql-clean-type-assertion');
     expect(names).toContain('structural/resource-leak');
     expect(names).toContain('semantic/logic-regression');
+    expect(names).toContain('refactor/unrelated-refactor');
+    expect(names).toContain('docs/documentation-only');
+    expect(names).toContain('test/test-only');
 
     const languages = fixtures.map((f) => f.language);
     expect(languages).toContain('typescript');
     expect(languages).toContain('python');
+    expect(languages).toContain('markdown');
   });
 
   describe('matchesExpected multi-factor assertion', () => {
@@ -123,13 +128,15 @@ describe('Golden Review Evaluation Testbed', () => {
     });
   });
 
-  describe('runEvaluationHarness execution', () => {
+  describe('Harness Integrity Mode Execution (Mocks)', () => {
     let scorecard: EvaluationScorecard;
 
-    it('executes full evaluation pipeline against all fixtures', async () => {
+    it('executes harness integrity pipeline against all fixtures', async () => {
       scorecard = await runEvaluationHarness();
       expect(scorecard).toBeDefined();
-      expect(scorecard.results).toHaveLength(4);
+      expect(scorecard.mode).toBe('harness_mock');
+      expect(scorecard.disclaimer).toContain('MockReviewModel is pre-programmed');
+      expect(scorecard.results).toHaveLength(8);
     }, 60000);
 
     it('verifies individual fixtures detect defect and suppress clean false-positives', () => {
@@ -140,20 +147,38 @@ describe('Golden Review Evaluation Testbed', () => {
       }
     });
 
-    it('verifies scorecard.precision exceeds 70% target (D-04)', () => {
-      expect(scorecard.precision).toBeGreaterThanOrEqual(0.7);
+    it('verifies harness integrity metrics are labeled properly without false quality claims', () => {
       expect(scorecard.truePositives).toBe(4);
       expect(scorecard.falseNegatives).toBe(0);
-    });
-
-    it('verifies scorecard.falsePositiveRate is below 30% target (D-04)', () => {
-      expect(scorecard.falsePositiveRate).toBeLessThanOrEqual(0.3);
       expect(scorecard.falsePositives).toBe(0);
+      expect(scorecard.passed).toBe(true);
+    });
+  });
+
+  describe('Live Evaluation Invariants and Guardrails', () => {
+    it('fails if live mode is requested with a MockReviewModel override', async () => {
+      await expect(
+        runEvaluationHarness({
+          live: true,
+          modelOverride: new MockReviewModel(),
+        })
+      ).rejects.toThrow(/Live evaluation invariant violated/);
     });
 
-    it('verifies total latency is within acceptable threshold', () => {
-      expect(scorecard.latencyMs).toBeLessThan(30000);
-      expect(scorecard.passed).toBe(true);
+    it('fails if live mode is requested but NVIDIA_API_KEY is not set', async () => {
+      const originalKey = process.env.NVIDIA_API_KEY;
+      try {
+        delete process.env.NVIDIA_API_KEY;
+        await expect(
+          runEvaluationHarness({
+            live: true,
+          })
+        ).rejects.toThrow(/NVIDIA_API_KEY environment variable is not set/);
+      } finally {
+        if (originalKey) {
+          process.env.NVIDIA_API_KEY = originalKey;
+        }
+      }
     });
   });
 });

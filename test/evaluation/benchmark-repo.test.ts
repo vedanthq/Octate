@@ -139,7 +139,10 @@ describe('Benchmark Repository Verification (Phase 3)', () => {
       expect(defect.endLine).toBeGreaterThanOrEqual(defect.startLine);
 
       // Verify targeted lines contain non-empty code
-      const targetLines = lines.slice(defect.startLine - 1, defect.endLine).join('\n').trim();
+      const targetLines = lines
+        .slice(defect.startLine - 1, defect.endLine)
+        .join('\n')
+        .trim();
       expect(targetLines.length).toBeGreaterThan(0);
 
       // Verify defect metadata is non-empty

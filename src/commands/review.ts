@@ -40,7 +40,7 @@ export function createReviewCommand(): Command {
     .argument('[refs...]', 'Git refs to review (commits, branches, tags)')
     .option('-s, --staged', 'Review staged changes (index vs HEAD)')
     .option('-w, --working', 'Review working tree changes (working dir vs index)')
-    .option('-c, --commit <ref>', 'Review a specific commit (commit vs parent)')
+    .option('--commit <ref>', 'Review a specific commit (commit vs parent)')
     .option('-r, --range <range>', 'Review a range of commits (base..head or base...head)')
     .option('--branch <branch>', 'Review changes on a branch vs its merge base with HEAD')
     .option(
@@ -50,7 +50,10 @@ export function createReviewCommand(): Command {
     .option('-j, --json', 'Output results as JSON')
     .option('--sarif', 'Output results as SARIF v2.1.0')
     .option('-q, --quiet', 'Minimal output (summary only)')
-    .option('--dir <path>', 'Repository or directory to review (defaults to current working directory)')
+    .option(
+      '--dir <path>',
+      'Repository or directory to review (defaults to current working directory)'
+    )
     .option('--output <file>', 'Write output to file instead of stdout')
     .option('--no-tui', 'Disable interactive TUI (use with --json/--sarif/--quiet)')
     .action(async (refs: string[], options: ReviewOptions) => {

@@ -88,15 +88,15 @@ export function tryRepairTruncatedJson(str: string): string | null {
   // Track unclosed braces and brackets
   const stack: string[] = [];
   let inString = false;
-  let escape = false;
+  let escaped = false;
 
   for (let i = 0; i < sliced.length; i++) {
     const char = sliced[i];
     if (inString) {
-      if (escape) {
-        escape = false;
+      if (escaped) {
+        escaped = false;
       } else if (char === '\\') {
-        escape = true;
+        escaped = true;
       } else if (char === '"') {
         inString = false;
       }

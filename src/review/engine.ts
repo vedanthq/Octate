@@ -83,6 +83,17 @@ export class ReviewEngine {
           criticInvoked: false,
           preCriticFindingCount: 0,
           postCriticFindingCount: 0,
+          stageCounts: {
+            rawStructural: 0,
+            rawSemantic: 0,
+            rawSecurity: 0,
+            preCriticDedup: 0,
+            criticStage1: 0,
+            criticStage2: 0,
+            postCriticConsolidation: 0,
+            ranked: 0,
+            final: 0,
+          },
         },
       };
     }
@@ -281,6 +292,17 @@ export class ReviewEngine {
       criticInvoked: criticResult.criticInvoked,
       preCriticFindingCount: preCriticCount,
       postCriticFindingCount: postCriticCount,
+      stageCounts: {
+        rawStructural: dagResult.rawCounts?.structural ?? 0,
+        rawSemantic: dagResult.rawCounts?.semantic ?? 0,
+        rawSecurity: dagResult.rawCounts?.security ?? 0,
+        preCriticDedup: preCriticCount,
+        criticStage1: criticResult.stage1Count,
+        criticStage2: criticResult.stage2Count,
+        postCriticConsolidation: postCriticCount,
+        ranked: rankedFindings.length,
+        final: rankedFindings.length,
+      },
     };
 
     log.info(

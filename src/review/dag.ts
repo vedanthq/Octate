@@ -22,7 +22,12 @@ import type {
   ModelUsage,
   ReviewModel,
 } from '../model/types.js';
-import { shouldTriggerSecurityReviewer, shouldTriggerSemanticReviewer } from './heuristics.js';
+import {
+  isDocumentationFile,
+  isTestFile,
+  shouldTriggerSecurityReviewer,
+  shouldTriggerSemanticReviewer,
+} from './heuristics.js';
 
 const log = createLogger('review/dag');
 
@@ -33,9 +38,11 @@ export type ReviewerRole = 'structural' | 'semantic' | 'security';
  */
 export const ROLE_TASKS: Record<ReviewerRole, string> = {
   structural:
-    'Structural code review: analyze contract adherence, nullability, and resource handling',
-  semantic: 'Semantic code review: analyze business logic and edge cases',
-  security: 'Security code review: identify security vulnerabilities and untrusted data flows',
+    'Structural code review: analyze contract adherence, nullability, and resource handling. Do NOT flag standard type assertions (as Type) or missing try/catch.',
+  semantic:
+    'Semantic code review: analyze broken business logic, regressions, and fatal flaws. Do NOT flag cosmetic formatting, whitespace edge cases, or harmless refactoring.',
+  security:
+    'Security code review: identify exploitable security vulnerabilities (injection, auth bypass, data leaks). Do NOT flag parameterized queries or safe code.',
 };
 
 /**
@@ -61,6 +68,11 @@ export interface DAGResult {
   warnings: string[];
   triggeredReviewers: string[];
   usage: ModelUsage;
+  rawCounts: {
+    structural: number;
+    semantic: number;
+    security: number;
+  };
 }
 
 const SECURITY_SOURCES = new Set(['bandit', 'semgrep', 'snyk', 'trivy', 'audit', 'security']);
@@ -165,6 +177,38 @@ function isAbortError(error: unknown, signal?: AbortSignal): boolean {
 export async function executeReviewDAG(params: DAGParams): Promise<DAGResult> {
   const { signal, model } = params;
 
+  const rawCounts = {
+    structural: 0,
+    semantic: 0,
+    security: 0,
+  };
+
+  // Fast path: skip heavy model reviewers on doc-only and test-only diffs deterministically
+  const allDocFiles =
+    params.changedFiles.length > 0 && params.changedFiles.every(isDocumentationFile);
+  const allTestFiles = params.changedFiles.length > 0 && params.changedFiles.every(isTestFile);
+  const allDocOrTest =
+    params.changedFiles.length > 0 &&
+    params.changedFiles.every((f) => isDocumentationFile(f) || isTestFile(f));
+
+  if (allDocFiles || allTestFiles || allDocOrTest) {
+    log.info(
+      { allDocFiles, allTestFiles, changedFiles: params.changedFiles },
+      'Fast path: skipping heavy model reviewers on doc-only / test-only diff'
+    );
+    return {
+      findings: [],
+      warnings: [],
+      triggeredReviewers: [],
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+      rawCounts,
+    };
+  }
+
   // 1. Evaluate reviewer triggers upfront
   const triggeredReviewers: ReviewerRole[] = ['structural'];
 
@@ -209,6 +253,7 @@ export async function executeReviewDAG(params: DAGParams): Promise<DAGResult> {
     const structuralRequest = buildModelRequest('structural', params);
     const structuralResponse = await pool.run(() => model.generate(structuralRequest, signal));
 
+    rawCounts.structural = structuralResponse.findings.length;
     for (const finding of structuralResponse.findings) {
       findings.push({
         ...finding,
@@ -243,6 +288,12 @@ export async function executeReviewDAG(params: DAGParams): Promise<DAGResult> {
           signal?.throwIfAborted();
           const request = buildModelRequest(role, params);
           const response = await pool.run(() => model.generate(request, signal));
+
+          if (role === 'semantic') {
+            rawCounts.semantic = response.findings.length;
+          } else if (role === 'security') {
+            rawCounts.security = response.findings.length;
+          }
 
           for (const finding of response.findings) {
             findings.push({
@@ -279,5 +330,6 @@ export async function executeReviewDAG(params: DAGParams): Promise<DAGResult> {
     warnings,
     triggeredReviewers,
     usage,
+    rawCounts,
   };
 }

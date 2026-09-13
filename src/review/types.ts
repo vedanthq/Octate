@@ -64,6 +64,20 @@ export interface ReviewSummary {
   filesAnalyzed: number;
   durationMs: number;
 }
+/**
+ * Stage-by-stage finding counts across the complete review pipeline.
+ */
+export interface ReviewStageCounts {
+  rawStructural: number;
+  rawSemantic: number;
+  rawSecurity: number;
+  preCriticDedup: number;
+  criticStage1: number;
+  criticStage2: number;
+  postCriticConsolidation: number;
+  ranked: number;
+  final: number;
+}
 
 /**
  * Telemetry and provenance metadata for the review execution.
@@ -83,6 +97,7 @@ export interface ExecutionMetadata {
   criticInvoked: boolean;
   preCriticFindingCount: number;
   postCriticFindingCount: number;
+  stageCounts?: ReviewStageCounts | undefined;
   timings?: StageTimings | undefined;
 }
 
@@ -134,7 +149,9 @@ export interface ReviewEngineInput {
   symbolIndex: SymbolIndex;
   diagnostics: Diagnostic[];
   model: ReviewModel;
-  config?: (Partial<ReviewConfig> & Pick<ReviewConfig, 'severity' | 'maxFindings' | 'minConfidence'>) | undefined;
+  config?:
+    | (Partial<ReviewConfig> & Pick<ReviewConfig, 'severity' | 'maxFindings' | 'minConfidence'>)
+    | undefined;
   signal?: AbortSignal | undefined;
   onProgress?: ReviewStageProgressCallback | undefined;
   scopeMetadata?:

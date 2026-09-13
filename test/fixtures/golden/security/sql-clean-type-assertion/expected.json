@@ -1,0 +1,14 @@
+{
+  "id": "sec-sql-clean-type-assertion",
+  "category": "security",
+  "expectedSeverity": "info",
+  "targetFile": "src/db/users.ts",
+  "lineRange": {
+    "start": 1,
+    "end": 20
+  },
+  "minConfidence": 0.8,
+  "negativeVariantFile": "clean.ts",
+  "expectedNegativeFindings": 0,
+  "hasDefect": false
+}

@@ -16,6 +16,7 @@ export interface ErrorWithHttpMetadata extends Error {
   status?: number;
   statusCode?: number;
   headers?: Headers | Record<string, string>;
+  retryAfterMs?: number;
   response?: {
     status?: number;
     headers?: Headers | Record<string, string>;
@@ -37,9 +38,15 @@ export function calculateBackoff(attempt: number, baseMs = 1000, maxMs = 10000):
 }
 
 /**
- * Extracts Retry-After duration in milliseconds if present in headers.
+ * Extracts Retry-After duration in milliseconds if present in headers or error.
  */
-function getRetryAfterMs(headers?: Headers | Record<string, string>): number | null {
+function getRetryAfterMs(
+  headers?: Headers | Record<string, string>,
+  error?: ErrorWithHttpMetadata
+): number | null {
+  if (error?.retryAfterMs) {
+    return error.retryAfterMs;
+  }
   if (!headers) {
     return null;
   }
@@ -199,8 +206,8 @@ export class ResilienceManager {
           });
         }
 
-        // Calculate retry delay (honor Retry-After if present)
-        const retryAfterMs = getRetryAfterMs(headers);
+        // Calculate retry delay (honor Retry-After or error metadata if present)
+        const retryAfterMs = getRetryAfterMs(headers, error);
         const delayMs = retryAfterMs !== null ? retryAfterMs : calculateBackoff(attempt);
 
         attempt++;

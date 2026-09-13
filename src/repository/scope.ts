@@ -130,7 +130,27 @@ export async function resolveScope(options: ScopeOptions): Promise<ReviewScope> 
       }
       scopeType = 'branch';
       headRef = branch;
-      baseRef = await findMergeBase(repoRoot, 'HEAD', branch);
+      let compareRef = 'HEAD';
+      try {
+        const headOid = await resolveRef(repoRoot, 'HEAD');
+        const branchOid = await resolveRef(repoRoot, branch);
+        if (headOid === branchOid) {
+          try {
+            await resolveRef(repoRoot, 'main');
+            compareRef = 'main';
+          } catch {
+            try {
+              await resolveRef(repoRoot, 'master');
+              compareRef = 'master';
+            } catch {
+              compareRef = 'HEAD';
+            }
+          }
+        }
+      } catch {
+        // Fallback to comparing with HEAD
+      }
+      baseRef = await findMergeBase(repoRoot, compareRef, branch);
       diff = await getDiff(repoRoot, baseRef, headRef);
       files = await getChangedFiles(repoRoot, baseRef, headRef);
       break;

@@ -1,0 +1,14 @@
+{
+  "id": "test-only",
+  "category": "testing",
+  "expectedSeverity": "info",
+  "targetFile": "test/users.test.ts",
+  "lineRange": {
+    "start": 1,
+    "end": 25
+  },
+  "minConfidence": 0.8,
+  "negativeVariantFile": "clean.ts",
+  "expectedNegativeFindings": 0,
+  "hasDefect": false
+}

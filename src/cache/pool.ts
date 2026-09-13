@@ -50,7 +50,7 @@ export class PromisePool {
    * @returns Promise that resolves with array of results in order
    */
   async map<T, R>(items: T[], processor: (item: T) => Promise<R>): Promise<R[]> {
-    return this.limit(() => Promise.all(items.map(processor)));
+    return Promise.all(items.map((item) => this.limit(() => processor(item))));
   }
 
   /**

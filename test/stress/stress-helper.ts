@@ -17,7 +17,7 @@ import type {
  * Creates an isolated temporary directory with auto-prefix.
  */
 export async function createTempDir(prefix = 'octate-stress-'): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), prefix));
+  return await fs.mkdtemp(path.join(os.tmpdir(), prefix));
 }
 
 /**
@@ -93,16 +93,11 @@ export async function createTempGitRepo(
  * Fast seeded Pseudo-Random Number Generator (Mulberry32) for reproducible fuzzing.
  */
 export function createMulberry32(seed: number): () => number {
-  // biome-ignore lint/suspicious/noBitwiseOperators: Mulberry32 PRNG requires bitwise arithmetic
   let s = seed >>> 0;
   return () => {
-    // biome-ignore lint/suspicious/noBitwiseOperators: Mulberry32 PRNG requires bitwise arithmetic
     s = (s + 0x6d2b79f5) | 0;
-    // biome-ignore lint/suspicious/noBitwiseOperators: Mulberry32 PRNG requires bitwise arithmetic
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    // biome-ignore lint/suspicious/noBitwiseOperators: Mulberry32 PRNG requires bitwise arithmetic
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    // biome-ignore lint/suspicious/noBitwiseOperators: Mulberry32 PRNG requires bitwise arithmetic
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }

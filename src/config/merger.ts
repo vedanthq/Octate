@@ -21,6 +21,7 @@ function toCamelCase(str: string): string {
 export function parseEnvConfig(): Partial<OctateConfig> {
   const prefix = 'OCTATE_';
   const result: Record<string, unknown> = {};
+  const KnownSections = new Set(['project', 'review', 'rules', 'architecture', 'ignore']);
 
   for (const [key, value] of Object.entries(process.env)) {
     if (!key.startsWith(prefix) || value === undefined) continue;
@@ -30,6 +31,7 @@ export function parseEnvConfig(): Partial<OctateConfig> {
     if (firstUnderscore === -1) continue; // No section
 
     const section = withoutPrefix.slice(0, firstUnderscore).toLowerCase();
+    if (!KnownSections.has(section)) continue;
     const keyPart = withoutPrefix.slice(firstUnderscore + 1);
     const camelKey = toCamelCase(keyPart.toLowerCase());
 

@@ -124,7 +124,7 @@ describe('commands:review', () => {
       const options = command.options.map((o) => o.flags);
       expect(options).toContain('-s, --staged');
       expect(options).toContain('-w, --working');
-      expect(options).toContain('-c, --commit <ref>');
+      expect(options).toContain('--commit <ref>');
       expect(options).toContain('-r, --range <range>');
       expect(options).toContain('--branch <branch>');
       expect(options).toContain('--fail-on <severity>');

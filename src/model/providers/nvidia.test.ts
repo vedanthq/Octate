@@ -52,6 +52,9 @@ describe('LocalNvidiaProvider', () => {
 
   it('throws AuthenticationError when NVIDIA_API_KEY is not set', async () => {
     delete process.env.NVIDIA_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.Gemini_API_Key;
+    delete process.env.gemini_api_key;
     const provider = new LocalNvidiaProvider();
     await expect(provider.generate(dummyRequest)).rejects.toThrow(AuthenticationError);
   });

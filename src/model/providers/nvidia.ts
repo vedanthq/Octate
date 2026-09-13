@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import process from 'node:process';
 import { AuthenticationError, ValidationError } from '../../errors/index.js';
 import { serializePromptContext } from '../../intelligence/context/serializer.js';
@@ -96,15 +97,19 @@ export class LocalNvidiaProvider implements ReviewModel {
     const envModel = process.env.OCTATE_MODEL ?? process.env.NVIDIA_MODEL;
     this.modelId = options.modelId ?? envModel ?? 'nvidia/nemotron-3-ultra-550b-a55b';
     this.endpointUrl =
-      options.endpointUrl ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
+      options.endpointUrl ??
+      process.env.OCTATE_ENDPOINT_URL ??
+      'https://integrate.api.nvidia.com/v1/chat/completions';
     this.repoRoot = options.repoRoot ?? process.cwd();
-    const envTimeout = process.env.NVIDIA_TIMEOUT_MS
-      ? Number.parseInt(process.env.NVIDIA_TIMEOUT_MS, 10)
-      : undefined;
+    const envTimeout =
+      (process.env.OCTATE_TIMEOUT_MS ?? process.env.NVIDIA_TIMEOUT_MS)
+        ? Number.parseInt((process.env.OCTATE_TIMEOUT_MS ?? process.env.NVIDIA_TIMEOUT_MS)!, 10)
+        : undefined;
 
-    const envConcurrency = process.env.NVIDIA_CONCURRENCY
-      ? Number.parseInt(process.env.NVIDIA_CONCURRENCY, 10)
-      : undefined;
+    const envConcurrency =
+      (process.env.OCTATE_CONCURRENCY ?? process.env.NVIDIA_CONCURRENCY)
+        ? Number.parseInt((process.env.OCTATE_CONCURRENCY ?? process.env.NVIDIA_CONCURRENCY)!, 10)
+        : undefined;
 
     this.resilienceManager = new ResilienceManager({
       maxRetries: options.maxRetries ?? 3,
@@ -118,6 +123,7 @@ export class LocalNvidiaProvider implements ReviewModel {
    */
   async generate(request: ModelRequest, signal?: AbortSignal): Promise<ModelResponse> {
     const key = this.options.apiKey ?? process.env.NVIDIA_API_KEY;
+
     if (!key) {
       throw new AuthenticationError(
         'NVIDIA_API_KEY environment variable is not set. Export NVIDIA_API_KEY to enable AI code review.'
@@ -160,13 +166,15 @@ export class LocalNvidiaProvider implements ReviewModel {
       const completion =
         await this.resilienceManager.executeWithRetry<NvidiaChatCompletionResponse>(
           async (reqSignal) => {
+            const headers: Record<string, string> = {
+              Authorization: `Bearer ${key}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            };
+
             const response = await fetch(this.endpointUrl, {
               method: 'POST',
-              headers: {
-                Authorization: `Bearer ${key}`,
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-              },
+              headers,
               body: JSON.stringify({
                 model: this.modelId,
                 messages,
@@ -180,13 +188,19 @@ export class LocalNvidiaProvider implements ReviewModel {
 
             if (!response.ok) {
               const errorBody = await response.text().catch(() => '');
-              const safeBody =
-                errorBody.length > 200 ? `${errorBody.slice(0, 200)}...` : errorBody;
+              const safeBody = errorBody.length > 200 ? `${errorBody.slice(0, 200)}...` : errorBody;
               const err: ErrorWithHttpMetadata = new Error(
                 `NVIDIA API request failed with status ${response.status}: ${safeBody}`
               );
               err.status = response.status;
               err.headers = response.headers;
+              const retryMatch =
+                errorBody.match(/retry(?:Delay|"retryDelay")["\s:]+([0-9.]+)s/i) ||
+                errorBody.match(/retry in ([0-9.]+)s/i);
+              if (retryMatch && retryMatch[1]) {
+                const sec = Math.ceil(Number.parseFloat(retryMatch[1]));
+                err.retryAfterMs = sec * 1000 + 1000;
+              }
               throw err;
             }
 

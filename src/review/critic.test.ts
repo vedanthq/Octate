@@ -121,6 +121,75 @@ describe('critic', () => {
       expect(result).toHaveLength(1);
       expect(result[0]?.file).toBe('src/service.ts');
     });
+
+    it('drops benign type assertion findings', async () => {
+      const benignFinding = createTestFinding({
+        file: 'src/db/users.ts',
+        title: 'Unsafe type assertion to UserRecord',
+        message: 'Type assertion without validation may lead to runtime mismatch',
+        suggestedFix: 'Use a runtime validator to parse database rows',
+      });
+      const validFinding = createTestFinding({
+        file: 'src/db/users.ts',
+        title: 'SQL injection vulnerability',
+        message: 'String concatenation into SQL query allows unauthorized access',
+        suggestedFix: 'Use parameterized SQL query with $1 placeholders',
+      });
+
+      const result = await filterDeterministicHardFloor({
+        findings: [benignFinding, validFinding],
+        repoRoot: '/repo',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.title).toBe('SQL injection vulnerability');
+    });
+
+    it('drops findings targeting lines outside the diff ranges', async () => {
+      const diff = `
+--- a/src/handler.ts
++++ b/src/handler.ts
+@@ -10,5 +10,5 @@
++const x = 1;
+`;
+      const outOfDiff = createTestFinding({
+        file: 'src/handler.ts',
+        startLine: 90,
+        endLine: 95,
+        evidence: [
+          {
+            file: 'src/handler.ts',
+            startLine: 90,
+            endLine: 95,
+            relationship: 'caller',
+            explanation: 'Outside patch',
+          },
+        ],
+      });
+      const inDiff = createTestFinding({
+        file: 'src/handler.ts',
+        startLine: 10,
+        endLine: 12,
+        evidence: [
+          {
+            file: 'src/handler.ts',
+            startLine: 10,
+            endLine: 12,
+            relationship: 'caller',
+            explanation: 'Inside patch',
+          },
+        ],
+      });
+
+      const result = await filterDeterministicHardFloor({
+        findings: [outOfDiff, inDiff],
+        repoRoot: '/repo',
+        diff,
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.startLine).toBe(10);
+    });
   });
 
   describe('executeCriticStage', () => {
@@ -139,6 +208,8 @@ describe('critic', () => {
 
       expect(result.criticInvoked).toBe(false);
       expect(result.findings).toHaveLength(0);
+      expect(result.stage1Count).toBe(0);
+      expect(result.stage2Count).toBe(0);
       expect(result.usage.totalTokens).toBe(0);
       expect(generateSpy).not.toHaveBeenCalled();
     });

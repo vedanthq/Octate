@@ -3,7 +3,11 @@ import type { Symbol as AnalysisSymbol, ParsedFile } from '../analysis/types.js'
 import { SymbolIndex } from '../intelligence/index/symbol-index.js';
 import { createTestFinding } from './__tests__/mocks.js';
 import {
+  isBenignOrSpeculative,
   isDeliberateIntentOrMock,
+  isDocumentationFile,
+  isFindingInDiffRanges,
+  isTestFile,
   parseDiffRanges,
   shouldTriggerSecurityReviewer,
   shouldTriggerSemanticReviewer,
@@ -374,6 +378,86 @@ describe('heuristics', () => {
       });
 
       expect(isDeliberateIntentOrMock({ finding })).toBe(false);
+    });
+  });
+
+  describe('isDocumentationFile', () => {
+    it('identifies markdown, text, and doc paths correctly', () => {
+      expect(isDocumentationFile('README.md')).toBe(true);
+      expect(isDocumentationFile('docs/architecture.markdown')).toBe(true);
+      expect(isDocumentationFile('LICENSE')).toBe(true);
+      expect(isDocumentationFile('docs/guide.txt')).toBe(true);
+      expect(isDocumentationFile('src/components/button.tsx')).toBe(false);
+      expect(isDocumentationFile('src/index.ts')).toBe(false);
+    });
+  });
+
+  describe('isTestFile', () => {
+    it('identifies test files, specs, and test directories', () => {
+      expect(isTestFile('src/utils.test.ts')).toBe(true);
+      expect(isTestFile('src/cli.spec.js')).toBe(true);
+      expect(isTestFile('tests/unit/login.py')).toBe(true);
+      expect(isTestFile('test/e2e/flow.ts')).toBe(true);
+      expect(isTestFile('python/test_engine.py')).toBe(true);
+      expect(isTestFile('src/services/payment.ts')).toBe(false);
+    });
+  });
+
+  describe('isFindingInDiffRanges', () => {
+    it('returns true when finding line falls inside diff ranges', () => {
+      const diffRanges = new Map([['src/db/users.ts', [{ start: 10, end: 20 }]]]);
+      const finding = createTestFinding({
+        file: 'src/db/users.ts',
+        startLine: 12,
+        endLine: 14,
+      });
+      expect(isFindingInDiffRanges(finding, diffRanges)).toBe(true);
+    });
+
+    it('returns false when finding line is far outside diff ranges', () => {
+      const diffRanges = new Map([['src/db/users.ts', [{ start: 10, end: 20 }]]]);
+      const finding = createTestFinding({
+        file: 'src/db/users.ts',
+        startLine: 85,
+        endLine: 90,
+      });
+      expect(isFindingInDiffRanges(finding, diffRanges)).toBe(false);
+    });
+  });
+
+  describe('isBenignOrSpeculative', () => {
+    it('flags benign type assertions as speculative', () => {
+      const finding = createTestFinding({
+        title: 'Unsafe type assertion to UserRecord',
+        message: 'Type assertion without validation may lead to runtime mismatch',
+        suggestedFix: 'Use a runtime validator like Zod to parse row',
+      });
+      expect(isBenignOrSpeculative(finding)).toBe(true);
+    });
+
+    it('flags missing local error handling as speculative', () => {
+      const finding = createTestFinding({
+        title: 'Missing try/catch block around database query',
+        message: 'Unhandled database exception could bubble up',
+        suggestedFix: 'Add try/catch block around await db.query',
+      });
+      expect(isBenignOrSpeculative(finding)).toBe(true);
+    });
+
+    it('does not flag real vulnerabilities as benign or speculative', () => {
+      const sqlInjection = createTestFinding({
+        title: 'SQL Injection via string interpolation',
+        message: 'Untrusted input parameter is concatenated directly into SQL query',
+        suggestedFix: 'Use parameterized query with $1 placeholders',
+      });
+      expect(isBenignOrSpeculative(sqlInjection)).toBe(false);
+
+      const cmdInjection = createTestFinding({
+        title: 'Command Injection in subprocess execution',
+        message: 'User input passed directly to child_process.exec without sanitization',
+        suggestedFix: 'Use execFile with argument array instead of exec with shell string',
+      });
+      expect(isBenignOrSpeculative(cmdInjection)).toBe(false);
     });
   });
 });

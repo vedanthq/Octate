@@ -65,7 +65,16 @@ export function parseDiffRanges(diff: string): Map<string, LineInterval[]> {
   return result;
 }
 
-const EXECUTABLE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.py', '.mjs', '.cjs']);
+const EXECUTABLE_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.py',
+  '.mjs',
+  '.cjs',
+  '.php',
+]);
 
 const CONTROL_FLOW_REGEX =
   /\b(if|else|switch|case|for|while|do|try|catch|finally|throw|return|yield|await|async|def|lambda|match)\b/;
@@ -137,6 +146,8 @@ const DEPENDENCY_FILES = new Set([
   'pyproject.toml',
   'go.mod',
   'cargo.toml',
+  'composer.json',
+  'composer.lock',
 ]);
 
 const SECURITY_PATTERN = new RegExp(
@@ -292,5 +303,162 @@ export function isDeliberateIntentOrMock(params: {
     }
   }
 
+  return false;
+}
+
+const DOC_EXTENSIONS = new Set(['.md', '.markdown', '.rst', '.txt', '.adoc']);
+
+/**
+ * Checks whether a file path points to documentation.
+ */
+export function isDocumentationFile(filePath: string): boolean {
+  const norm = path.normalize(filePath).toLowerCase().replace(/\\/g, '/');
+  const ext = path.extname(norm);
+  const base = path.basename(norm);
+  if (DOC_EXTENSIONS.has(ext)) {
+    return true;
+  }
+  if (base === 'license' || base === 'readme' || base === 'changelog' || base === 'notice') {
+    return true;
+  }
+  if (norm.startsWith('docs/') || norm.includes('/docs/')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Checks whether a file path points to test/spec code or fixtures.
+ */
+export function isTestFile(filePath: string): boolean {
+  const norm = path.normalize(filePath).toLowerCase().replace(/\\/g, '/');
+  const base = path.basename(norm);
+  if (
+    norm.includes('__tests__/') ||
+    norm.includes('tests/mocks/') ||
+    norm.includes('__mocks__/') ||
+    norm.includes('/mocks/') ||
+    norm.includes('/fixtures/') ||
+    norm.startsWith('test/') ||
+    norm.startsWith('tests/') ||
+    base.startsWith('test_') ||
+    base.endsWith('_test.py') ||
+    base.endsWith('.test.ts') ||
+    base.endsWith('.spec.ts') ||
+    base.endsWith('.test.js') ||
+    base.endsWith('.spec.js') ||
+    base.endsWith('.test.tsx') ||
+    base.endsWith('.spec.tsx')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Checks whether a finding points to code ranges directly touched by the diff.
+ */
+export function isFindingInDiffRanges(
+  finding: ModelFinding,
+  diffRanges: Map<string, LineInterval[]>
+): boolean {
+  if (diffRanges.size === 0) return true;
+  const normFindingFile = path.normalize(finding.file);
+
+  let targetRanges: LineInterval[] | undefined = diffRanges.get(normFindingFile);
+  if (!targetRanges) {
+    for (const [diffFile, ranges] of diffRanges.entries()) {
+      if (
+        normFindingFile.endsWith(diffFile) ||
+        diffFile.endsWith(normFindingFile) ||
+        path.basename(normFindingFile) === path.basename(diffFile)
+      ) {
+        targetRanges = ranges;
+        break;
+      }
+    }
+  }
+
+  if (!targetRanges || targetRanges.length === 0) {
+    if (finding.evidence && finding.evidence.length > 0) {
+      for (const ev of finding.evidence) {
+        const evFile = path.normalize(ev.file);
+        for (const [diffFile, ranges] of diffRanges.entries()) {
+          if (evFile.endsWith(diffFile) || diffFile.endsWith(evFile)) {
+            const evStart = ev.startLine;
+            const evEnd = ev.endLine ?? evStart;
+            if (ranges.some((r) => evStart <= r.end + 2 && evEnd >= r.start - 2)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  const start = finding.startLine;
+  const end = finding.endLine ?? start;
+  const inRange = targetRanges.some((r) => start <= r.end + 2 && end >= r.start - 2);
+  if (inRange) {
+    return true;
+  }
+
+  if (finding.evidence && finding.evidence.length > 0) {
+    for (const ev of finding.evidence) {
+      const evFile = path.normalize(ev.file);
+      if (normFindingFile.endsWith(evFile) || evFile.endsWith(normFindingFile)) {
+        const evStart = ev.startLine;
+        const evEnd = ev.endLine ?? evStart;
+        if (targetRanges.some((r) => evStart <= r.end + 2 && evEnd >= r.start - 2)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+const BENIGN_OR_SPECULATIVE_PATTERNS = [
+  // Benign type assertions & casting
+  /\b(unsafe|unvalidated|unchecked|loose)\s+(type\s+)?(assertion|cast)\b/i,
+  /\btype\s+assertion\s+(is\s+)?(unsafe|unvalidated|unchecked)\b/i,
+  /\buse\s+of\s+('as'|type\s+assertion)\b/i,
+  /\btype\s+assertion\s+without\s+(validation|runtime\s+check|type\s+guard)\b/i,
+  /\bcasting\s+(as|to)\s+['"]?[A-Za-z0-9_]+['"]?\s+without\s+(validation|runtime\s+check)\b/i,
+  /\bmissing\s+(type\s+guard|runtime\s+schema\s+validation)\b/i,
+
+  // Speculative missing local error handling
+  /\bmissing\s+(try[\s/-]?catch|local\s+error\s+handling)\s*(around|for|block)?\b/i,
+  /\bunhandled\s+(database\s+)?(query\s+)?(exception|error|promise\s+rejection)\b/i,
+  /\bpotential\s+unhandled\s+(exception|error|rejection)\b/i,
+  /\bno\s+error\s+handling\s+for\s+(database|query|async)\b/i,
+  /\bunhandled\s+async\s+error\b/i,
+
+  // Style / Documentation / Pedantic nits
+  /\b(missing|add|update)\s+(jsdoc|tsdoc|docstring|documentation|comment)\b/i,
+  /\b(code\s+style|naming\s+convention|consider\s+renaming)\b/i,
+  /\b(magic\s+number|magic\s+string)\b/i,
+  /\bprefer\s+(const|let|template\s+literal)\b/i,
+
+  // Cosmetic formatting / localization / whitespace edge cases
+  /\b(hardcoded\s+\$|hardcoded\s+currency|currency\s+symbol|currency\s+code)\b/i,
+  /\b(intl\.numberformat|internationalization|i18n|localization)\b/i,
+  /\bwhitespace-only\b/i,
+  /\b(awkward|cosmetic|minor)\s+(output|greeting|formatting|display)\b/i,
+];
+
+/**
+ * Checks whether a finding is a known benign pattern, speculative observation, or stylistic nit.
+ */
+export function isBenignOrSpeculative(finding: ModelFinding): boolean {
+  const text = `${finding.title} ${finding.message} ${finding.suggestedFix}`.toLowerCase();
+
+  for (const pattern of BENIGN_OR_SPECULATIVE_PATTERNS) {
+    if (pattern.test(text)) {
+      return true;
+    }
+  }
   return false;
 }

@@ -108,6 +108,13 @@ Progress: [██████████] 100%
 | 2026-09-10 | Two-stage Critic filter | Deterministic grounding/confidence pre-filter before calling LLM Critic; fail-fast if Critic fails |
 | 2026-09-10 | Multi-factor finding deduplication | Merge by file+range, symbol+category, or root-cause signature; escalate severity, union evidence (cap 5) |
 | 2026-09-10 | Normalized composite ranking | Linear weighted sum (severity, confidence, blast radius, evidence, security, regression); never drop Critical findings |
+| 2026-09-12 | Methodological separation of evaluation modes | MockReviewModel restricted strictly to harness integrity testing; live pipeline evaluation requires real NVIDIA model on isolated Git diffs; zero mock fallback |
+
+### Quick Tasks Completed
+
+| Date | Task Slug | Description | Result |
+| :--- | :--- | :--- | :--- |
+| 2026-09-12 | `20260912-evaluation-validity` | Audit benchmark implementation for methodological validity; separate mock harness from live pipeline; add `benchmark/evaluate.ts --live`; fix diagnostic file scoping | Complete |
 
 ### Active Todos
 

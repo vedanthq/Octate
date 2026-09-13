@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import type { Symbol as AnalysisSymbol, ParsedFile } from '../analysis/types.js';
 import { ModelError } from '../errors/index.js';
 import { SymbolIndex } from '../intelligence/index/symbol-index.js';
@@ -260,6 +260,76 @@ describe('executeReviewDAG', () => {
         signal: controller.signal,
       })
     ).rejects.toThrow();
+  });
+
+  it('fast-paths doc-only diffs without invoking any model reviewers', async () => {
+    const model = new MockReviewModel();
+    const generateSpy = jest.spyOn(model, 'generate');
+
+    const result = await executeReviewDAG({
+      repoRoot: '/repo',
+      diff: '+++ b/docs/readme.md\n+Added docs',
+      changedFiles: ['docs/readme.md'],
+      reviewContext: createTestContext(),
+      symbolIndex: new SymbolIndex(),
+      diagnostics: [],
+      model,
+    });
+
+    expect(result.triggeredReviewers).toHaveLength(0);
+    expect(result.findings).toHaveLength(0);
+    expect(result.usage.totalTokens).toBe(0);
+    expect(result.rawCounts).toEqual({ structural: 0, semantic: 0, security: 0 });
+    expect(generateSpy).not.toHaveBeenCalled();
+  });
+
+  it('fast-paths test-only diffs without invoking any model reviewers', async () => {
+    const model = new MockReviewModel();
+    const generateSpy = jest.spyOn(model, 'generate');
+
+    const result = await executeReviewDAG({
+      repoRoot: '/repo',
+      diff: '+++ b/test/app.test.ts\n+expect(true).toBe(true);',
+      changedFiles: ['test/app.test.ts'],
+      reviewContext: createTestContext(),
+      symbolIndex: new SymbolIndex(),
+      diagnostics: [],
+      model,
+    });
+
+    expect(result.triggeredReviewers).toHaveLength(0);
+    expect(result.findings).toHaveLength(0);
+    expect(result.usage.totalTokens).toBe(0);
+    expect(result.rawCounts).toEqual({ structural: 0, semantic: 0, security: 0 });
+    expect(generateSpy).not.toHaveBeenCalled();
+  });
+
+  it('records rawCounts accurately across triggered reviewers', async () => {
+    const model = new MockReviewModel();
+    model.setRoleHandler('structural', async () => ({
+      findings: [
+        createTestFinding({ reviewer: 'structural', title: 'Struct 1' }),
+        createTestFinding({ reviewer: 'structural', title: 'Struct 2' }),
+      ],
+      usage: { promptTokens: 50, completionTokens: 25, totalTokens: 75 },
+      model: 'mock-nemotron',
+      latencyMs: 5,
+      finishReason: 'stop',
+    }));
+
+    const result = await executeReviewDAG({
+      repoRoot: '/repo',
+      diff: '+++ b/src/code.ts\n+const x = 1;',
+      changedFiles: ['src/code.ts'],
+      reviewContext: createTestContext(),
+      symbolIndex: new SymbolIndex(),
+      diagnostics: [],
+      model,
+    });
+
+    expect(result.rawCounts.structural).toBe(2);
+    expect(result.rawCounts.semantic).toBe(0);
+    expect(result.rawCounts.security).toBe(0);
   });
 });
 

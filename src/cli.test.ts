@@ -101,4 +101,42 @@ describe('cli entrypoint', () => {
       helpSpy.mockRestore();
     });
   });
+
+  describe('CLI option parsing and collision regression tests', () => {
+    it('parses review --commit HEAD correctly without config collision', () => {
+      const program = createProgram();
+      const reviewCmd = program.commands.find((c) => c.name() === 'review');
+      reviewCmd?.action(() => {});
+      program.parse(['review', '--commit', 'HEAD'], { from: 'user' });
+      expect(reviewCmd?.opts().commit).toBe('HEAD');
+      expect(reviewCmd?.opts().config).toBeUndefined();
+    });
+
+    it('parses review --commit HEAD~1 correctly', () => {
+      const program = createProgram();
+      const reviewCmd = program.commands.find((c) => c.name() === 'review');
+      reviewCmd?.action(() => {});
+      program.parse(['review', '--commit', 'HEAD~1'], { from: 'user' });
+      expect(reviewCmd?.opts().commit).toBe('HEAD~1');
+      expect(reviewCmd?.opts().config).toBeUndefined();
+    });
+
+    it('parses review --config octate.yaml correctly', () => {
+      const program = createProgram();
+      const reviewCmd = program.commands.find((c) => c.name() === 'review');
+      reviewCmd?.action(() => {});
+      program.parse(['--config', 'octate.yaml', 'review'], { from: 'user' });
+      expect(reviewCmd?.opts().config).toBe('octate.yaml');
+      expect(reviewCmd?.opts().commit).toBeUndefined();
+    });
+
+    it('parses review --commit HEAD --config octate.yaml correctly simultaneously', () => {
+      const program = createProgram();
+      const reviewCmd = program.commands.find((c) => c.name() === 'review');
+      reviewCmd?.action(() => {});
+      program.parse(['--config', 'octate.yaml', 'review', '--commit', 'HEAD'], { from: 'user' });
+      expect(reviewCmd?.opts().commit).toBe('HEAD');
+      expect(reviewCmd?.opts().config).toBe('octate.yaml');
+    });
+  });
 });

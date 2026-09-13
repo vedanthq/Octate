@@ -1,83 +1,50 @@
-# Octate v1.0 Quality & Performance Evaluation Report
+# Octate Evaluation & Benchmark Report
 
-**Benchmark Date:** 2026-09-12  
-**Harness Version:** 1.0.0  
-**Status:** PASSED
+**Benchmark Date:** 2026-09-13  
+**Evaluation Mode:** **HARNESS INTEGRITY TEST (MOCKS)**  
+**Model:** `mock-nemotron`  
+**Overall Status:** ✅ PASSED  
 
-## Executive Summary
+> **Methodological Note:** This evaluation was executed in **Harness Integrity Mode** using `MockReviewModel`. These figures verify testbed plumbing, schema contracts, and semantic matchers only, and **MUST NOT** be cited as evidence of Octate's live detection quality.
 
-Octate's core architectural thesis is that deterministic repository analysis must precede AI model reasoning, and that AI reasoning must be verified through grounded evidence and multi-stage false-positive suppression.
+---
 
-This evaluation quantitatively validates the review pipeline against a multi-language ground-truth golden testbed with paired clean counterparts.
+## 1. Metric Summary
 
-| Metric | Target | Benchmark Result | Status |
+| Metric | Target | Result | Status |
 | :--- | :--- | :--- | :--- |
-| **Precision** | > 70.0% | **100.0%** | ✅ PASSED |
+| **Evaluation Mode** | — | **HARNESS INTEGRITY TEST (MOCKS) - NOT A MEASURE OF REAL DETECTION QUALITY** | — |
+| **True Positives** | > 0 | **4** | ✅ |
+| **False Positives** | 0 | **0** | ✅ |
+| **False Negatives** | 0 | **0** | ✅ |
+| **Precision** | > 70.0% | **100.0%** (Mock Harness Only) | ✅ PASSED |
+| **Recall** | > 70.0% | **100.0%** (Mock Harness Only) | ✅ PASSED |
 | **False-Positive Rate** | < 30.0% | **0.0%** | ✅ PASSED |
-| **Review Latency (p50)** | < 30,000 ms | **1582 ms** | ✅ PASSED |
-| **Review Latency (p95)** | < 30,000 ms | **1592 ms** | ✅ PASSED |
-| **Token Budget Headroom** | < 8,000 tokens | **540 tokens (6.8%)** | ✅ PASSED |
-| **Cache Acceleration** | > 3.0x speedup | **5.6x speedup** | ✅ PASSED |
+| **p50 Latency** | < 30,000 ms | **1731 ms** | ✅ PASSED |
+| **p95 Latency** | < 30,000 ms | **2176 ms** | ✅ PASSED |
+| **Total Tokens Consumed** | < 64,000 tokens | **4095 tokens** | ✅ |
+| **API Failures** | 0 | **0** | ✅ |
 
 ---
 
-## Evaluation Methodology
+## 2. Per-Fixture Evaluation Breakdown
 
-1. **Multi-Language Golden Testbed:**
-   - Fixtures represent realistic pull requests in TypeScript and Python across three vulnerability domains: Security, Structural, and Semantic.
-   - Ground-truth defect locations and severities are declared in machine-readable `expected.json` schemas.
-
-2. **Negative-Case Pairing:**
-   - Every vulnerable fixture has an exact clean counterpart representing safe, remediated code.
-   - The evaluation harness executes `ReviewUseCase` against both versions. Clean code must yield **strictly 0 blocking findings**.
-
-3. **Multi-Factor Semantic Grounding:**
-   - Match criteria evaluates:
-     - Exact target file path resolution.
-     - Line overlap within a ±3 line tolerance window.
-     - Severity rank matching or exceeding expected threshold.
-     - Category alignment (`security`, `correctness`, `reliability`).
-     - Confidence score meeting or exceeding minimum confidence (0.75 - 0.85).
+| Fixture | Language | Category | Detected (TP) | False Positives | Latency | Tokens (Prompt / Comp / Total) | Passed |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `security/command-injection` | python | security | ✅ Yes (1) | 0 (Clean) | 220ms | 630 / 315 / 945 | ✅ |
+| `security/sql-clean-type-assertion` | typescript | security | ✅ Yes (0) | 0 (Clean) | 2114ms | 300 / 150 / 450 | ✅ |
+| `security/sql-injection` | typescript | security | ✅ Yes (1) | 0 (Clean) | 1630ms | 630 / 315 / 945 | ✅ |
+| `structural/resource-leak` | typescript | structural | ✅ Yes (1) | 0 (Clean) | 1625ms | 460 / 230 / 690 | ✅ |
+| `semantic/logic-regression` | typescript | semantic | ✅ Yes (1) | 0 (Clean) | 2045ms | 460 / 230 / 690 | ✅ |
+| `refactor/unrelated-refactor` | typescript | refactor | ✅ Yes (0) | 0 (Clean) | 1731ms | 250 / 125 / 375 | ✅ |
+| `docs/documentation-only` | markdown | docs | ✅ Yes (0) | 0 (Clean) | 24ms | 0 / 0 / 0 | ✅ |
+| `test/test-only` | typescript | test | ✅ Yes (0) | 0 (Clean) | 2176ms | 0 / 0 / 0 | ✅ |
 
 ---
 
-## Fixture Evaluation Breakdown
+## 3. Evaluation Methodology
 
-| Fixture | Language | Category | Expected Defect | Detected | Clean False Positives | Latency |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `security/command-injection` | Python | security | 1 finding(s) | ✅ Yes | 0 (Clean) | 215ms |
-| `security/sql-injection` | TypeScript | security | 1 finding(s) | ✅ Yes | 0 (Clean) | 1592ms |
-| `structural/resource-leak` | TypeScript | structural | 1 finding(s) | ✅ Yes | 0 (Clean) | 1582ms |
-| `semantic/logic-regression` | TypeScript | semantic | 1 finding(s) | ✅ Yes | 0 (Clean) | 1505ms |
-
----
-
-## False-Positive Suppression & Two-Stage Critic
-
-The benchmark confirms that Octate's two-stage Critic architecture eliminates hallucinations and trivial linter noise:
-
-1. **Deterministic Hard Floor (Stage 1):**
-   - Discards findings lacking inspectable file/line evidence anchors.
-   - Discards findings below confidence threshold (0.60).
-   - Enforces architectural boundary rules and ignore patterns deterministically without model cost.
-
-2. **Model Critic (Stage 2):**
-   - Cross-examines candidate findings against repository context.
-   - Suppresses ungrounded assertions and contextual non-issues before ranking.
-
----
-
-## Performance, Token Budget & Cache Speedup
-
-- **Cold Review Latency (p50):** 1582 ms
-- **Warm Cache Review Latency:** 285 ms (5.6x speedup)
-- **Token Efficiency:** The full Reviewer DAG and Critic pipeline completes in ~540 tokens per single-file change, well under the 8,000-token per-request budget ceiling.
-
----
-
-## Conclusion
-
-Octate satisfies all v1.0 evaluation criteria set forth in ROADMAP.md:
-- Precision (100.0%) exceeds the 70% threshold.
-- False-positive rate (0.0%) remains below the 30% ceiling.
-- CI/CD execution operates deterministically without network dependencies.
+1. **Isolated Git Repositories:** Each test fixture is evaluated in an isolated temporary Git repository.
+2. **Realistic Baseline Diff Scopes:** A clean baseline commit is committed first; changes are applied on top to produce realistic Git diff hunks matching production pull requests.
+3. **Independent Variant Evaluation:** Vulnerable variants and clean counterparts are evaluated independently to prevent state contamination.
+4. **Multi-Factor Semantic Grounding:** Detections are asserted using 5-factor grounding: exact file path, line window overlap (+/-3 lines), severity rank matching or exceeding expectations, category alignment, and minimum confidence threshold.

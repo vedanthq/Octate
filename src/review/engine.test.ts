@@ -100,6 +100,12 @@ describe('ReviewEngine', () => {
     expect(result.metadata.criticInvoked).toBe(true);
     expect(result.metadata.preCriticFindingCount).toBe(1);
     expect(result.metadata.postCriticFindingCount).toBe(1);
+    expect(result.metadata.stageCounts).toBeDefined();
+    expect(result.metadata.stageCounts?.rawStructural).toBe(1);
+    expect(result.metadata.stageCounts?.preCriticDedup).toBe(1);
+    expect(result.metadata.stageCounts?.criticStage1).toBe(1);
+    expect(result.metadata.stageCounts?.criticStage2).toBe(1);
+    expect(result.metadata.stageCounts?.final).toBe(1);
   });
 
   it('short-circuits on empty diff returning clean ReviewResult with 0 tokens', async () => {

@@ -104,7 +104,9 @@ describe('safeJsonParse', () => {
       "id": "3",
       "severity": "medium",
       "message": "Truncat`;
-    const result = safeJsonParse<{ findings: Array<{ id: string; severity: string; message: string }> }>(raw);
+    const result = safeJsonParse<{
+      findings: Array<{ id: string; severity: string; message: string }>;
+    }>(raw);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.findings).toHaveLength(2);

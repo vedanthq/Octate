@@ -12,6 +12,7 @@ try {
 } catch {
   // Ignore if .env is missing or invalid
 }
+
 import type { CancellationController } from './cancellation/index.js';
 import { registerCommands } from './commands/index.js';
 import { isOctateError } from './errors/index.js';

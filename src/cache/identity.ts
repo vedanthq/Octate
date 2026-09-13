@@ -130,7 +130,7 @@ export async function getCacheDir(repoRoot: string): Promise<CachePaths> {
  * all cache directories are created.
  */
 export async function initializeProjectCache(repoRoot: string): Promise<CachePaths> {
-  return getCacheDir(repoRoot);
+  return await getCacheDir(repoRoot);
 }
 
 /**

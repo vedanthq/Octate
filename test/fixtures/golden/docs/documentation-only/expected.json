@@ -1,0 +1,14 @@
+{
+  "id": "docs-only",
+  "category": "correctness",
+  "expectedSeverity": "info",
+  "targetFile": "docs/guide.md",
+  "lineRange": {
+    "start": 1,
+    "end": 20
+  },
+  "minConfidence": 0.8,
+  "negativeVariantFile": "clean.md",
+  "expectedNegativeFindings": 0,
+  "hasDefect": false
+}

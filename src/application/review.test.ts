@@ -70,6 +70,17 @@ describe('application:review', () => {
 
     const testFinding = createTestFinding({
       file: testFile,
+      startLine: 1,
+      endLine: 2,
+      evidence: [
+        {
+          file: testFile,
+          startLine: 1,
+          endLine: 2,
+          relationship: 'caller',
+          explanation: 'Object accessed here before null guard',
+        },
+      ],
       severity: 'high',
       category: 'correctness',
       title: 'Potential null dereference in handler',

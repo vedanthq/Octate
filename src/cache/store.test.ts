@@ -7,9 +7,9 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
-import { type CacheStore, createCacheStore } from './store.js';
-import type { Diagnostic } from '../model/types.js';
 import type { DiagnosticCollection } from '../analysis/diagnostics/index.js';
+import type { Diagnostic } from '../model/types.js';
+import { type CacheStore, createCacheStore } from './store.js';
 
 const TEST_DIR = join(tmpdir(), `octate-store-test-${randomUUID()}`);
 

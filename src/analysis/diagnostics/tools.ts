@@ -2,6 +2,7 @@
  * Tool detection and subprocess execution for static analysis.
  */
 
+import path from 'node:path';
 import { createPromisePool } from '../../cache/pool.js';
 import { type SpawnWithSignalOptions, spawnWithSignal } from '../../cancellation/subprocess.js';
 import { createLogger } from '../../logging/index.js';
@@ -23,7 +24,7 @@ const TOOL_DEFINITIONS: ToolConfig[] = [
   {
     name: 'tsc',
     command: 'npx',
-    args: ['tsc', '--noEmit', '--pretty', 'false'],
+    args: ['--no-install', 'tsc', '--noEmit', '--pretty', 'false'],
     configFile: 'tsconfig.json',
     languages: ['typescript', 'javascript'],
     enabled: false,
@@ -31,7 +32,7 @@ const TOOL_DEFINITIONS: ToolConfig[] = [
   {
     name: 'biome',
     command: 'npx',
-    args: ['biome', 'check', '--reporter=json'],
+    args: ['--no-install', 'biome', 'check', '--reporter=json'],
     configFile: 'biome.json',
     languages: ['typescript', 'javascript'],
     enabled: false,
@@ -78,10 +79,10 @@ const TOOL_DEFINITIONS: ToolConfig[] = [
   },
 ];
 
-async function fileExists(path: string): Promise<boolean> {
+async function fileExists(targetPath: string): Promise<boolean> {
   try {
     const { access } = await import('node:fs/promises');
-    await access(path);
+    await access(targetPath);
     return true;
   } catch {
     return false;
@@ -163,18 +164,50 @@ export async function runTool(
   try {
     log.debug({ tool: tool.name, fileCount: files.length }, 'Running tool');
 
-    // For tools that work on whole project, we pass the repo root
-    // For file-specific tools, we could filter args
+    let command = tool.command;
     const args = [...tool.args];
 
-    // Add file filters for file-specific tools if needed
+    // Prefer local node_modules/.bin binary over npx wrapper if present
+    const localBin = `${repoRoot}/node_modules/.bin/${tool.name}`;
+    if (await fileExists(localBin)) {
+      command = localBin;
+      if (args[0] === '--no-install') {
+        args.splice(0, 2);
+      } else if (args[0] === tool.name) {
+        args.shift();
+      }
+    }
+
+    const langExtMap: Record<string, string[]> = {
+      typescript: ['.ts', '.tsx'],
+      javascript: ['.js', '.jsx', '.mjs', '.cjs'],
+      python: ['.py'],
+    };
+    const toolExts = new Set(tool.languages.flatMap((l) => langExtMap[l] ?? []));
+    const targetFiles = files
+      .filter((f) => toolExts.has(path.extname(f).toLowerCase()))
+      .filter((f) => {
+        const resolved = path.resolve(repoRoot, f);
+        const rel = path.relative(repoRoot, resolved);
+        return !rel.startsWith('..') && !path.isAbsolute(rel);
+      });
+
+    // Add file filters for file-specific tools
     if (
-      files.length > 0 &&
+      targetFiles.length > 0 &&
       tool.name !== 'tsc' &&
       tool.name !== 'mypy' &&
-      tool.name !== 'pyright'
+      tool.name !== 'pyright' &&
+      tool.name !== 'pytest'
     ) {
-      // Some tools accept file arguments
+      if (tool.name === 'bandit') {
+        // Bandit scans specific files directly without recursive directory flag
+        const rIndex = args.indexOf('-r');
+        if (rIndex !== -1) {
+          args.splice(rIndex, 2); // remove -r and '.'
+        }
+      }
+      args.push(...targetFiles);
     }
 
     const spawnOptions: SpawnWithSignalOptions = {
@@ -183,7 +216,7 @@ export async function runTool(
     if (signal) {
       spawnOptions.signal = signal;
     }
-    const result = await spawnWithSignal(tool.command, args, spawnOptions);
+    const result = await spawnWithSignal(command, args, spawnOptions);
 
     const timeMs = Date.now() - startTime;
 

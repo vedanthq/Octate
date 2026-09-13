@@ -9,9 +9,6 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "correctness": "error",
-      "style": "warn",
-      "suspicious": "error",
       "style": {
         "noProcessEnv": "off",
         "noExcessiveClassesPerFile": "off",
@@ -36,12 +33,22 @@
     }
   },
   "files": {
-    "ignoreUnknown": false,
-    "experimentalScannerIgnores": ["dist/", "node_modules/", "coverage/", ".opencode/", ".planning/"]
+    "ignoreUnknown": true,
+    "includes": [
+      "src/**/*",
+      "scripts/**/*",
+      "test/**/*",
+      "!test/fixtures/**/*",
+      "benchmark/evaluate.ts",
+      "bin/**/*",
+      "biome.json",
+      "package.json",
+      "tsconfig.json"
+    ]
   },
   "overrides": [
     {
-      "includes": ["scripts/**"],
+      "includes": ["scripts/**", "test/**", "benchmark/**"],
       "linter": {
         "rules": {
           "suspicious": {
